@@ -2,9 +2,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Constants for Instagram API
-const INSTAGRAM_API_URL = "https://graph.instagram.com/v13.0";
-
 // CORS headers for browser requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,36 +31,43 @@ serve(async (req) => {
     const { url, userId } = await req.json();
     
     if (!url) {
-      throw new Error('No Instagram URL provided');
+      throw new Error('No URL provided');
     }
 
     if (!userId) {
       throw new Error('User ID is required');
     }
 
-    // Extract the Instagram post ID
-    const postId = extractInstagramPostId(url);
-    if (!postId) {
-      throw new Error('Invalid Instagram URL. Could not extract post ID.');
-    }
+    console.log(`Processing URL: ${url}`);
 
-    console.log(`Extracting recipe from Instagram post ID: ${postId}`);
+    // Determine URL type and call appropriate extraction method
+    const urlType = determineUrlType(url);
+    console.log(`Detected URL type: ${urlType}`);
 
-    // Fetch media data from Instagram Graph API
-    const mediaData = await fetchInstagramMedia(postId, instagramAccessToken);
+    let recipeData;
     
-    if (!mediaData) {
-      throw new Error('Failed to fetch Instagram post data');
+    if (urlType === 'instagram') {
+      // Extract Instagram post ID and fetch data
+      const postId = extractInstagramPostId(url);
+      if (!postId) {
+        throw new Error('Invalid Instagram URL. Could not extract post ID.');
+      }
+      console.log(`Extracting recipe from Instagram post ID: ${postId}`);
+      const mediaData = await fetchInstagramMedia(postId, instagramAccessToken);
+      recipeData = parseRecipeFromCaption(mediaData);
+    } else if (urlType === 'recipe-website') {
+      // For recipe websites, use structured data extraction
+      recipeData = await extractRecipeWebsiteData(url);
+    } else {
+      // For general websites, use generic content extraction
+      recipeData = await extractGeneralWebsiteData(url);
     }
-
-    // Parse caption to extract recipe details
-    const recipe = parseRecipeFromCaption(mediaData);
     
     // Store the recipe in Supabase
     const { data: savedRecipe, error } = await supabase
       .from('recipes')
       .insert({
-        ...recipe,
+        ...recipeData,
         user_id: userId,
         source_url: url
       })
@@ -84,7 +88,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in instagram-recipe-extractor:', error);
+    console.error('Error in recipe-extractor:', error);
     
     return new Response(
       JSON.stringify({
@@ -98,6 +102,40 @@ serve(async (req) => {
     );
   }
 });
+
+// Function to determine the type of URL
+function determineUrlType(url: string): 'instagram' | 'recipe-website' | 'general-website' {
+  // Check if it's an Instagram URL
+  if (/instagram\.com\/(p|reel|stories)\/[^\/\?]+/i.test(url)) {
+    return 'instagram';
+  }
+  
+  // Check if it's a known recipe website
+  const recipeWebsites = [
+    /allrecipes\.com/i,
+    /foodnetwork\.com/i,
+    /epicurious\.com/i,
+    /bonappetit\.com/i,
+    /taste\.com/i,
+    /delish\.com/i,
+    /seriouseats\.com/i,
+    /cookinglight\.com/i,
+    /eatingwell\.com/i,
+    /simplyrecipes\.com/i,
+    /food52\.com/i,
+    /thekitchn\.com/i,
+    /tasty\.co/i
+  ];
+  
+  for (const pattern of recipeWebsites) {
+    if (pattern.test(url)) {
+      return 'recipe-website';
+    }
+  }
+  
+  // Default to general website
+  return 'general-website';
+}
 
 // Function to extract Instagram post ID from URL
 function extractInstagramPostId(url: string): string | null {
@@ -122,10 +160,7 @@ function extractInstagramPostId(url: string): string | null {
 async function fetchInstagramMedia(mediaId: string, accessToken: string) {
   try {
     // In a real implementation, you would use the Instagram Graph API
-    // For example: https://graph.instagram.com/v13.0/{media-id}?fields=caption,media_url&access_token={access-token}
-    
     // For demonstration purposes, we're returning mock data
-    // In production, you'd replace this with a real API call
     console.log(`[MOCK] Fetching Instagram media with ID: ${mediaId}`);
     
     // Simulate API response
@@ -136,18 +171,6 @@ async function fetchInstagramMedia(mediaId: string, accessToken: string) {
       media_type: "IMAGE",
       timestamp: new Date().toISOString()
     };
-    
-    // In a real implementation, you would make an actual HTTP request:
-    /*
-    const response = await fetch(`${INSTAGRAM_API_URL}/${mediaId}?fields=caption,media_url,media_type,timestamp&access_token=${accessToken}`);
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Instagram API error: ${errorData.error?.message || response.statusText}`);
-    }
-    
-    return await response.json();
-    */
   } catch (error) {
     console.error('Error fetching Instagram media:', error);
     throw error;
@@ -225,6 +248,90 @@ function parseRecipeFromCaption(mediaData: any) {
     tags,
     difficulty_level: determineDifficulty(prepTime, cookTime),
     servings: 2, // Default value
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+}
+
+// Function to extract recipe data from recipe websites
+async function extractRecipeWebsiteData(url: string) {
+  // In a real implementation, you would:
+  // 1. Fetch the website HTML
+  // 2. Look for JSON-LD or microdata with schema.org/Recipe
+  // 3. Parse the structured data
+  
+  console.log(`[MOCK] Extracting recipe data from website: ${url}`);
+  
+  // For demonstration, return mock recipe data
+  return {
+    title: "Chocolate Chip Cookies",
+    description: "The best chocolate chip cookies you'll ever taste!",
+    category: "Dessert",
+    image_url: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?q=80&w=1000&auto=format&fit=crop",
+    prep_time: 15,
+    cook_time: 10,
+    ingredients: JSON.stringify([
+      "2 1/4 cups all-purpose flour",
+      "1 teaspoon baking soda",
+      "1 teaspoon salt",
+      "1 cup unsalted butter, softened",
+      "3/4 cup granulated sugar",
+      "3/4 cup packed brown sugar",
+      "2 large eggs",
+      "2 teaspoons vanilla extract",
+      "2 cups semi-sweet chocolate chips"
+    ]),
+    instructions: JSON.stringify([
+      "Preheat oven to 375°F (190°C).",
+      "Combine flour, baking soda, and salt in a small bowl.",
+      "Beat butter, granulated sugar, and brown sugar in a large bowl until creamy.",
+      "Add eggs one at a time, beating well after each addition. Beat in vanilla.",
+      "Gradually beat in flour mixture. Stir in chocolate chips.",
+      "Drop by rounded tablespoon onto ungreased baking sheets.",
+      "Bake for 9 to 11 minutes or until golden brown.",
+      "Cool on baking sheets for 2 minutes; remove to wire racks to cool completely."
+    ]),
+    tags: ["cookies", "dessert", "chocolate", "baking"],
+    difficulty_level: "Easy",
+    servings: 24,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+}
+
+// Function to extract recipe data from general websites
+async function extractGeneralWebsiteData(url: string) {
+  // In a real implementation, you would:
+  // 1. Fetch the website HTML
+  // 2. Use content extraction algorithms to identify recipe-like content
+  // 3. Apply heuristics to identify ingredients, instructions, etc.
+  
+  console.log(`[MOCK] Extracting general content from website: ${url}`);
+  
+  // For demonstration, return mock recipe data
+  return {
+    title: "Extracted Recipe",
+    description: "Recipe extracted from website content",
+    category: "Main Course",
+    image_url: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80&w=1000&auto=format&fit=crop",
+    prep_time: 20,
+    cook_time: 30,
+    ingredients: JSON.stringify([
+      "Ingredient 1",
+      "Ingredient 2",
+      "Ingredient 3",
+      "Ingredient 4",
+      "Ingredient 5"
+    ]),
+    instructions: JSON.stringify([
+      "Step 1 of the recipe",
+      "Step 2 of the recipe",
+      "Step 3 of the recipe",
+      "Step 4 of the recipe"
+    ]),
+    tags: ["extracted", "recipe"],
+    difficulty_level: "Medium",
+    servings: 4,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };

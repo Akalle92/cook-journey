@@ -1,3 +1,4 @@
+
 import { Recipe } from '@/components/RecipeCard';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -51,8 +52,8 @@ export const fetchRecipes = async (): Promise<Recipe[]> => {
   }
 };
 
-// Extract recipe from Instagram URL using our edge function
-export const extractRecipeFromInstagram = async (url: string): Promise<Recipe> => {
+// Extract recipe from URL using our edge function
+export const extractRecipeFromUrl = async (url: string): Promise<Recipe> => {
   console.log(`Extracting recipe from URL: ${url}`);
   
   try {
@@ -63,28 +64,33 @@ export const extractRecipeFromInstagram = async (url: string): Promise<Recipe> =
       throw new Error('You must be logged in to extract recipes');
     }
     
+    // Clean the URL before sending
+    let cleanUrl = url.trim();
+    // Remove any URL parameters
+    cleanUrl = cleanUrl.split('?')[0];
+    
     // Call our Supabase Edge Function to extract the recipe
     const { data, error } = await supabase.functions.invoke('instagram-recipe-extractor', {
       body: {
-        url: url,
+        url: cleanUrl,
         userId: user.id
       }
     });
     
     if (error) {
-      console.error('Error calling instagram-recipe-extractor:', error);
+      console.error('Error calling recipe extractor:', error);
       throw new Error(error.message || 'Failed to extract recipe');
     }
     
     if (!data || data.status === 'error') {
-      throw new Error(data?.message || 'Failed to extract recipe from Instagram');
+      throw new Error(data?.message || 'Failed to extract recipe from URL');
     }
     
     // Return the extracted recipe
     return mapToRecipe(data.data);
   } catch (error: any) {
-    console.error('Error in extractRecipeFromInstagram:', error);
-    throw new Error(error.message || 'Failed to extract recipe from Instagram. Please try again.');
+    console.error('Error in extractRecipeFromUrl:', error);
+    throw new Error(error.message || 'Failed to extract recipe. Please try again.');
   }
 };
 

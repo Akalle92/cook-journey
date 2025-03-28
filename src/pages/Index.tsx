@@ -2,12 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Header from '@/components/Header';
-import InstagramUrlInput from '@/components/InstagramUrlInput';
+import RecipeUrlInput from '@/components/RecipeUrlInput';
 import TrendingRecipes from '@/components/TrendingRecipes';
 import RecipeGrid from '@/components/RecipeGrid';
 import RecipeDetail from '@/components/RecipeDetail';
 import { Recipe } from '@/components/RecipeCard';
-import { fetchRecipes, extractRecipeFromInstagram } from '@/services/recipeService';
+import { fetchRecipes, extractRecipeFromUrl } from '@/services/recipeService';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 
@@ -27,7 +27,7 @@ const Index = () => {
   
   // Set up mutation for recipe extraction
   const extractRecipeMutation = useMutation({
-    mutationFn: extractRecipeFromInstagram,
+    mutationFn: extractRecipeFromUrl,
     onSuccess: (newRecipe) => {
       // Update the recipes in the cache with the new recipe
       queryClient.setQueryData(['recipes'], (oldData: Recipe[] = []) => {
@@ -40,7 +40,7 @@ const Index = () => {
       
       toast({
         title: "Recipe Extracted",
-        description: "Your recipe has been successfully extracted from Instagram!",
+        description: "Your recipe has been successfully extracted!",
         variant: "default",
       });
     },
@@ -64,17 +64,12 @@ const Index = () => {
       return;
     }
     
-    // Clean the URL a bit before sending
-    let cleanUrl = url.trim();
-    // Remove any URL parameters
-    cleanUrl = cleanUrl.split('?')[0];
-    
     toast({
       title: "Extracting Recipe",
-      description: "Processing the Instagram post...",
+      description: "Processing the URL...",
     });
     
-    extractRecipeMutation.mutate(cleanUrl);
+    extractRecipeMutation.mutate(url);
   };
   
   const handleRecipeClick = (recipe: Recipe) => {
@@ -92,7 +87,7 @@ const Index = () => {
       
       <main className="container mx-auto px-4 py-6">
         <div className="max-w-3xl mx-auto mb-12">
-          <InstagramUrlInput 
+          <RecipeUrlInput 
             onSubmit={handleRecipeExtraction} 
             isLoading={extractRecipeMutation.isPending} 
           />
@@ -116,7 +111,7 @@ const Index = () => {
             ) : (
               <div className="text-center py-12">
                 <p className="text-muted-foreground mb-4">
-                  No recipes found. Extract your first recipe from Instagram!
+                  No recipes found. Extract your first recipe from a URL!
                 </p>
               </div>
             )}
