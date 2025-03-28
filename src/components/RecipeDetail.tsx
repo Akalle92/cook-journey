@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { X, ChevronRight, Clock, Utensils, ChefHat, Timer } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Recipe } from './RecipeCard';
@@ -52,6 +52,9 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) 
         
         <DialogHeader className="px-6 pt-6 pb-3">
           <DialogTitle className="font-serif text-3xl font-bold">{recipe.title}</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            {recipe.prepTime} · {recipe.difficulty} difficulty
+          </DialogDescription>
           
           <div className="flex items-center gap-4 mt-4 text-sm text-offwhite/70">
             <div className="flex items-center gap-1.5">
@@ -91,7 +94,7 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) 
         <div className="flex-1 overflow-auto px-6 py-4">
           {activeTab === 'ingredients' ? (
             <ul className="space-y-3 font-mono">
-              {recipe.ingredients.map((ingredient, index) => (
+              {recipe.ingredients && recipe.ingredients.map((ingredient, index) => (
                 <li key={index} className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 mt-2 bg-coral rounded-full"></div>
                   <span>{ingredient}</span>
@@ -100,7 +103,7 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) 
             </ul>
           ) : (
             <ol className="space-y-6">
-              {recipe.instructions.map((instruction, index) => (
+              {recipe.instructions && recipe.instructions.map((instruction, index) => (
                 <li key={index} className="flex gap-3">
                   <div className="flex-shrink-0 bg-muted w-8 h-8 font-mono text-teal flex items-center justify-center">
                     {index + 1}
