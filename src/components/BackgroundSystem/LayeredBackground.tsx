@@ -17,7 +17,7 @@ interface Particle {
   type: 'circle' | 'square' | 'triangle' | 'star' | 'dot';
   rotation: number;
   rotationSpeed: number;
-  update: () => void;
+  update: (canvasWidth: number, canvasHeight: number) => void;
   draw: (ctx: CanvasRenderingContext2D) => void;
 }
 
@@ -179,9 +179,9 @@ export const LayeredBackground: React.FC<LayeredBackgroundProps> = ({ className 
     oscillationSpeed: number;
     oscillationOffset: number;
     
-    constructor(canvas: HTMLCanvasElement, color: string, type: 'circle' | 'square' | 'triangle' | 'star' | 'dot', speedMultiplier: number) {
-      this.x = Math.random() * canvas.width;
-      this.y = Math.random() * canvas.height;
+    constructor(canvasWidth: number, canvasHeight: number, color: string, type: 'circle' | 'square' | 'triangle' | 'star' | 'dot', speedMultiplier: number) {
+      this.x = Math.random() * canvasWidth;
+      this.y = Math.random() * canvasHeight;
       this.originalX = this.x;
       this.originalY = this.y;
       this.size = type === 'dot' ? Math.random() * 2 + 0.5 : Math.random() * 3 + 1;
@@ -201,16 +201,16 @@ export const LayeredBackground: React.FC<LayeredBackgroundProps> = ({ className 
       this.oscillationOffset = Math.random() * Math.PI * 2;
     }
     
-    update() {
+    update(canvasWidth: number, canvasHeight: number) {
       // Basic movement
       this.x += this.speedX;
       this.y += this.speedY;
       
       // Reset position if particle goes off screen
-      if (this.x < 0) this.x = canvas.width;
-      if (this.x > canvas.width) this.x = 0;
-      if (this.y < 0) this.y = canvas.height;
-      if (this.y > canvas.height) this.y = 0;
+      if (this.x < 0) this.x = canvasWidth;
+      if (this.x > canvasWidth) this.x = 0;
+      if (this.y < 0) this.y = canvasHeight;
+      if (this.y > canvasHeight) this.y = 0;
       
       // Rotation for non-circle particles
       if (this.type !== 'circle' && this.type !== 'dot') {
@@ -326,7 +326,7 @@ export const LayeredBackground: React.FC<LayeredBackgroundProps> = ({ className 
     for (let i = 0; i < particleCount; i++) {
       const availableTypes = currentMood.particleTypes as ('circle' | 'square' | 'triangle' | 'star' | 'dot')[];
       const randomType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-      particles.push(new EnhancedParticle(canvas, color, randomType, currentMood.particleSpeed));
+      particles.push(new EnhancedParticle(canvas.width, canvas.height, color, randomType, currentMood.particleSpeed));
     }
     
     // Add additional accent particles for visual interest
@@ -334,7 +334,7 @@ export const LayeredBackground: React.FC<LayeredBackgroundProps> = ({ className 
     for (let i = 0; i < accentCount; i++) {
       // Create accent particles
       const accentType = (currentMood.particleTypes as ('circle' | 'square' | 'triangle' | 'star' | 'dot')[])[0];
-      const particle = new EnhancedParticle(canvas, '#FFFFFF', accentType, currentMood.particleSpeed * 0.7);
+      const particle = new EnhancedParticle(canvas.width, canvas.height, '#FFFFFF', accentType, currentMood.particleSpeed * 0.7);
       particle.opacity *= 0.5; // Make accent particles more subtle
       particles.push(particle);
     }
@@ -536,7 +536,7 @@ export const LayeredBackground: React.FC<LayeredBackgroundProps> = ({ className 
       
       // Update and draw particles
       particleSystemRef.current.forEach(particle => {
-        particle.update();
+        particle.update(canvas.width, canvas.height);
         particle.draw(ctx);
       });
       
@@ -603,3 +603,4 @@ export const LayeredBackground: React.FC<LayeredBackgroundProps> = ({ className 
     </div>
   );
 };
+
