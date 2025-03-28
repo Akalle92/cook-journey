@@ -51,7 +51,7 @@ const categoryToMaterial = {
 };
 
 // Map difficulty to accent positions
-const difficultyToAccent = {
+const difficultyToAccent: Record<string, "bottom" | "left" | "top" | "right" | "none"> = {
   'Easy': 'bottom',
   'Medium': 'left',
   'Hard': 'top',
@@ -73,7 +73,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
   };
 
   // Get accent position based on difficulty
-  const getAccentPosition = () => {
+  const getAccentPosition = (): "bottom" | "left" | "top" | "right" | "none" => {
     return difficultyToAccent[recipe.difficulty] || 'none';
   };
 
