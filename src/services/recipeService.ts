@@ -52,6 +52,33 @@ export const fetchRecipes = async (): Promise<Recipe[]> => {
   }
 };
 
+// Delete a recipe from Supabase
+export const deleteRecipe = async (recipeId: string): Promise<void> => {
+  try {
+    // Get the current user to validate ownership
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('You must be logged in to delete recipes');
+    }
+    
+    // Delete the recipe
+    const { error } = await supabase
+      .from('recipes')
+      .delete()
+      .eq('id', recipeId)
+      .eq('user_id', user.id); // Ensure the user can only delete their own recipes
+    
+    if (error) {
+      console.error('Error deleting recipe:', error);
+      throw new Error(error.message || 'Failed to delete recipe');
+    }
+  } catch (error: any) {
+    console.error('Error in deleteRecipe:', error);
+    throw new Error(error.message || 'Failed to delete recipe. Please try again.');
+  }
+};
+
 // Extract recipe from URL using our universal recipe extractor edge function
 export const extractRecipeFromUrl = async (url: string): Promise<Recipe> => {
   console.log(`Extracting recipe from URL: ${url}`);
