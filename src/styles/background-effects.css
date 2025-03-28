@@ -1,0 +1,172 @@
+
+/* Background Effects CSS */
+
+/* Gradient Animations */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animated-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 30s ease infinite;
+}
+
+/* Floating Animation */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.floating {
+  animation: float 6s ease-in-out infinite;
+}
+
+.floating-slow {
+  animation: float 12s ease-in-out infinite;
+}
+
+.floating-fast {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Pulse Animation */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.pulsing {
+  animation: pulse 4s ease-in-out infinite;
+}
+
+/* Parallax Container */
+.parallax-container {
+  perspective: 1000px;
+  overflow: hidden;
+}
+
+.parallax-layer-1 {
+  transform: translateZ(-200px) scale(1.2);
+}
+
+.parallax-layer-2 {
+  transform: translateZ(-100px) scale(1.1);
+}
+
+.parallax-layer-3 {
+  transform: translateZ(0px) scale(1);
+}
+
+/* Glass Morphism */
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.glass-morphism-dark {
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* Dynamic Background Colors based on Time of Day */
+.bg-time-morning {
+  background: linear-gradient(135deg, #FFF6E0, #FFD59E);
+}
+
+.bg-time-afternoon {
+  background: linear-gradient(165deg, #E0F7FF, #91DEFF);
+}
+
+.bg-time-evening {
+  background: linear-gradient(195deg, #FFE8D6, #FFB088);
+}
+
+.bg-time-night {
+  background: linear-gradient(135deg, #1F2033, #111122);
+}
+
+/* Cuisine-specific Background Accents */
+.accent-italian {
+  border-color: rgba(125, 145, 108, 0.2);
+}
+
+.accent-japanese {
+  border-color: rgba(38, 70, 83, 0.2);
+}
+
+.accent-mexican {
+  border-color: rgba(224, 122, 95, 0.2);
+}
+
+.accent-nordic {
+  border-color: rgba(214, 207, 199, 0.2);
+}
+
+/* Responsive Background Adaptations */
+.bg-adapt-mobile {
+  background-size: 100px 100px;
+}
+
+.bg-adapt-tablet {
+  background-size: 150px 150px;
+}
+
+.bg-adapt-desktop {
+  background-size: 200px 200px;
+}
+
+/* Grain Overlay */
+.grain-overlay::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.1;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Vignette Effect */
+.vignette::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.3);
+}
