@@ -14,6 +14,7 @@ export interface Particle {
   type: ParticleType;
   rotation: number;
   rotationSpeed: number;
+  lastUpdate?: number; // Track last update time for delta calculations
   update: (canvasWidth: number, canvasHeight: number) => void;
   draw: (ctx: CanvasRenderingContext2D) => void;
 }
