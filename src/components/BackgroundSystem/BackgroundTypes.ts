@@ -1,6 +1,5 @@
-
 import { ParticleType } from './particles/ParticleTypes';
-import { ThemeType } from './presets/BackgroundPresets';
+export type ThemeType = 'mystical' | 'futuristic' | 'natural' | 'elegant' | 'minimalist' | 'vibrant' | 'cozy' | 'default';
 
 export type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
 export type CuisineType = 'italian' | 'japanese' | 'mexican' | 'nordic' | 'default';
@@ -8,7 +7,7 @@ export type CuisinePattern = 'terracotta' | 'paper' | 'geometric' | 'woodgrain' 
 export type Mood = 'peaceful' | 'energetic' | 'cozy' | 'elegant' | 'default';
 
 // Re-export ThemeType for public use
-export { ThemeType };
+export type { ThemeType };
 
 export interface TimeGradient {
   colors: string[];
