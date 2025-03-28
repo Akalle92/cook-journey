@@ -53,3 +53,71 @@ export const drawTriangle = (
   
   ctx.restore();
 };
+
+// Draw a ring shape
+export const drawRing = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number
+) => {
+  const innerRadius = radius * 0.6;
+  
+  ctx.beginPath();
+  // Outer circle
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  // Inner circle (counterclockwise to create hole)
+  ctx.arc(x, y, innerRadius, 0, Math.PI * 2, true);
+  ctx.closePath();
+};
+
+// Draw a plus shape
+export const drawPlus = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  rotation: number
+) => {
+  const armWidth = size * 0.3;
+  
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+  
+  ctx.beginPath();
+  // Horizontal arm
+  ctx.rect(-size/2, -armWidth/2, size, armWidth);
+  // Vertical arm
+  ctx.rect(-armWidth/2, -size/2, armWidth, size);
+  
+  ctx.restore();
+};
+
+// Draw a wave shape
+export const drawWave = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  rotation: number
+) => {
+  const amplitude = size * 0.3;
+  const frequency = 1 / size * Math.PI * 2;
+  const points = 20;
+  
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+  
+  ctx.beginPath();
+  ctx.moveTo(-size/2, 0);
+  
+  for (let i = 0; i <= points; i++) {
+    const xPos = -size/2 + (i / points) * size;
+    const yPos = Math.sin(xPos * frequency) * amplitude;
+    ctx.lineTo(xPos, yPos);
+  }
+  
+  ctx.restore();
+};
