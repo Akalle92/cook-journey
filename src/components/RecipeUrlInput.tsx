@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { InfoCircledIcon } from '@radix-ui/react-icons';
+import { InfoIcon } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface RecipeUrlInputProps {
@@ -67,7 +67,7 @@ const RecipeUrlInput = ({ onSubmit, isLoading }: RecipeUrlInputProps) => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <InfoCircledIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                  <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="max-w-xs">Claude AI can enhance recipe details, format instructions, and even generate recipes from content that isn't in a standard recipe format.</p>
