@@ -42,7 +42,7 @@ const glassVariants = {
   }
 };
 
-const cuisineTextures = {
+const cuisineTextures: Record<string, "medium" | "fine" | "coarse" | "paper" | "fabric" | "brushstroke" | "food"> = {
   italian: "medium",
   japanese: "fine",
   mexican: "coarse",
@@ -50,12 +50,12 @@ const cuisineTextures = {
   default: "fine",
 };
 
-const cuisineBlends = {
-  italian: "soft-light" as const,
-  japanese: "overlay" as const,
-  mexican: "soft-light" as const,
-  nordic: "multiply" as const,
-  default: "soft-light" as const,
+const cuisineBlends: Record<string, "overlay" | "soft-light" | "multiply" | "screen"> = {
+  italian: "soft-light",
+  japanese: "overlay",
+  mexican: "soft-light",
+  nordic: "multiply",
+  default: "soft-light",
 };
 
 const GlassCard = React.forwardRef<
@@ -69,10 +69,9 @@ const GlassCard = React.forwardRef<
   const handleMouseUp = () => interactive && setIsActive(false);
   const handleMouseLeave = () => interactive && setIsActive(false);
   
-  const textureType = cuisineTextures[cuisineType || "default"];
-  const blendMode = cuisineBlends[cuisineType || "default"];
+  const textureType = cuisineType ? (cuisineTextures[cuisineType] || cuisineTextures["default"]) : cuisineTextures["default"];
+  const blendMode = cuisineType ? (cuisineBlends[cuisineType] || cuisineBlends["default"]) : cuisineBlends["default"];
   
-  // Dynamic accent color based on cuisine
   const accentColors = {
     italian: "from-[#7D916C]/60 via-[#7D916C]/40 to-transparent",
     japanese: "from-[#264653]/60 via-[#264653]/40 to-transparent",
