@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { ThemeType } from './presets/BackgroundPresets';
 
 type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
 type CuisineType = 'italian' | 'japanese' | 'mexican' | 'nordic' | 'default';
@@ -11,9 +12,11 @@ interface BackgroundContextType {
   cuisineType: CuisineType;
   recipeStage: RecipeStage;
   mood: Mood;
+  theme: ThemeType;
   setCuisineType: (type: CuisineType) => void;
   setRecipeStage: (stage: RecipeStage) => void;
   setMood: (mood: Mood) => void;
+  setTheme: (theme: ThemeType) => void;
 }
 
 const BackgroundContext = createContext<BackgroundContextType | undefined>(undefined);
@@ -31,6 +34,7 @@ export const BackgroundProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [cuisineType, setCuisineType] = useState<CuisineType>('default');
   const [recipeStage, setRecipeStage] = useState<RecipeStage>('default');
   const [mood, setMood] = useState<Mood>('default');
+  const [theme, setTheme] = useState<ThemeType>('default');
 
   // Determine time of day based on current time
   useEffect(() => {
@@ -64,9 +68,11 @@ export const BackgroundProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         cuisineType,
         recipeStage,
         mood,
+        theme,
         setCuisineType,
         setRecipeStage,
         setMood,
+        setTheme,
       }}
     >
       {children}

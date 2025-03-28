@@ -1,10 +1,14 @@
 
 import { ParticleType } from './particles/ParticleTypes';
+import { ThemeType } from './presets/BackgroundPresets';
 
 export type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
 export type CuisineType = 'italian' | 'japanese' | 'mexican' | 'nordic' | 'default';
 export type CuisinePattern = 'terracotta' | 'paper' | 'geometric' | 'woodgrain' | 'default';
 export type Mood = 'peaceful' | 'energetic' | 'cozy' | 'elegant' | 'default';
+
+// Re-export ThemeType for public use
+export { ThemeType };
 
 export interface TimeGradient {
   colors: string[];

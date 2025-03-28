@@ -1,6 +1,6 @@
 
 import { Particle, ParticleType } from './ParticleTypes';
-import { drawStar, drawTriangle } from './ParticleShapes';
+import { drawStar, drawTriangle, drawRing, drawPlus, drawWave } from './ParticleShapes';
 
 export class EnhancedParticle implements Particle {
   x: number;
@@ -25,8 +25,27 @@ export class EnhancedParticle implements Particle {
     this.y = Math.random() * canvasHeight;
     this.originalX = this.x;
     this.originalY = this.y;
-    this.size = type === 'dot' ? Math.random() * 2 + 0.5 : Math.random() * 3 + 1;
-    if (type === 'star') this.size *= 1.5;
+    
+    // Adjust size based on particle type
+    switch(type) {
+      case 'dot':
+        this.size = Math.random() * 2 + 0.5;
+        break;
+      case 'star':
+        this.size = Math.random() * 4 + 2;
+        break;
+      case 'ring':
+        this.size = Math.random() * 5 + 3;
+        break;
+      case 'wave':
+        this.size = Math.random() * 6 + 4;
+        break;
+      case 'plus':
+        this.size = Math.random() * 3 + 2;
+        break;
+      default:
+        this.size = Math.random() * 3 + 1;
+    }
     
     this.speedX = (Math.random() * 0.5 - 0.25) * speedMultiplier;
     this.speedY = (Math.random() * 0.5 - 0.25) * speedMultiplier;
@@ -34,7 +53,12 @@ export class EnhancedParticle implements Particle {
     this.color = color;
     this.type = type;
     this.rotation = Math.random() * Math.PI * 2;
+    
+    // Rotation speed varies by type
     this.rotationSpeed = (Math.random() * 0.01 - 0.005) * speedMultiplier;
+    if (type === 'star' || type === 'triangle') {
+      this.rotationSpeed *= 1.5; // Stars and triangles rotate faster
+    }
     
     // Oscillation properties
     this.oscillationRadius = Math.random() * 30 + 10;
@@ -133,6 +157,21 @@ export class EnhancedParticle implements Particle {
       case 'star':
         drawStar(ctx, this.x, this.y, this.size * 2, 5, this.rotation);
         ctx.fill();
+        break;
+        
+      case 'ring':
+        drawRing(ctx, this.x, this.y, this.size);
+        ctx.fill();
+        break;
+        
+      case 'plus':
+        drawPlus(ctx, this.x, this.y, this.size * 2, this.rotation);
+        ctx.fill();
+        break;
+        
+      case 'wave':
+        drawWave(ctx, this.x, this.y, this.size * 2, this.rotation);
+        ctx.stroke();
         break;
     }
     

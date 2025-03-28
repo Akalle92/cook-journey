@@ -27,7 +27,10 @@ export const initParticles = (
     'dot': 0.3,      // 30% dots
     'square': 0.1,   // 10% squares
     'triangle': 0.05, // 5% triangles
-    'star': 0.05     // 5% stars
+    'star': 0.05,    // 5% stars
+    'ring': 0.0,     // 0% rings by default
+    'plus': 0.0,     // 0% plus by default
+    'wave': 0.0      // 0% waves by default
   };
   
   // Create particles with distribution weighted by performance impact
@@ -170,7 +173,10 @@ export const renderParticlesByType = (
     'dot': [],
     'square': [],
     'triangle': [],
-    'star': []
+    'star': [],
+    'ring': [],
+    'plus': [],
+    'wave': []
   };
   
   // Sort particles by type
