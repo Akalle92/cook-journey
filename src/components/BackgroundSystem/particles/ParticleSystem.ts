@@ -89,7 +89,7 @@ export const initParticles = (
 
 // Cached mouse position and throttle variables
 let lastMouseUpdate = 0;
-const MOUSE_UPDATE_THROTTLE = 50; // ms
+const MOUSE_UPDATE_THROTTLE = 100; // Increased from 50ms to 100ms for smoother interaction
 let lastParticleUpdate = 0;
 
 // Update particles with mouse interaction (optimized)
@@ -113,45 +113,58 @@ export const updateParticlesWithMouse = (
     lastMouseUpdate = now;
     
     // Only update a subset of particles with mouse interaction each frame
-    // Closer particles are updated more frequently
-    particles.forEach(particle => {
+    // This creates a more gentle, flowing effect
+    const maxParticlesToUpdate = Math.min(particles.length, 200); // Limit the number of particles to update
+    const indexStep = Math.ceil(particles.length / maxParticlesToUpdate);
+    
+    for (let i = 0; i < particles.length; i += indexStep) {
+      const particle = particles[i];
+      
       if (particle instanceof EnhancedParticle) {
         const dx = mousePosition.x - particle.x;
         const dy = mousePosition.y - particle.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        const interactionRange = 150;
+        const interactionRange = 200; // Increased from 150 to 200 for wider effect area
         
-        // Apply interaction only for nearby particles
+        // Apply interaction only for nearby particles with a smooth falloff
         if (distance < interactionRange) {
-          const interactionStrength = currentMood.interactionStrength;
-          const force = (1 - distance / interactionRange) * interactionStrength;
+          // Softened interaction strength - reduced by 60%
+          const interactionStrength = currentMood.interactionStrength * 0.4;
           
-          // Apply force with reduced magnitude
-          particle.speedX -= dx * force * 0.005; // Reduced from 0.01
-          particle.speedY -= dy * force * 0.005; // Reduced from 0.01
+          // Apply gentle force with gradual falloff
+          const falloff = Math.pow(1 - distance / interactionRange, 2); // Quadratic falloff for smoother transition
+          const force = falloff * interactionStrength;
           
-          // Increase opacity when interacting
-          particle.opacity = Math.min(0.6, particle.opacity + 0.05 * force);
+          // Apply force with reduced magnitude and introduce slight drift effect
+          particle.speedX = particle.speedX * 0.95 - dx * force * 0.002; // Reduced from 0.005 to 0.002
+          particle.speedY = particle.speedY * 0.95 - dy * force * 0.002; // Reduced from 0.005 to 0.002
+          
+          // Subtle opacity change to avoid flickering
+          particle.opacity = Math.min(
+            0.5, 
+            particle.opacity + 0.01 * force
+          );
         }
       }
-    });
+    }
   }
   
   // Apply elegant/peaceful oscillations only to a subset of particles each frame
   if ((currentMood.name === 'elegant' || currentMood.name === 'peaceful') && now - lastParticleUpdate > 16) {
     lastParticleUpdate = now;
     
-    // Apply oscillation to 25% of particles each frame
-    const oscillationSubset = Math.floor(particles.length * 0.25);
+    // Apply oscillation to 15% of particles each frame (reduced from 25%)
+    const oscillationSubset = Math.floor(particles.length * 0.15);
     const startIdx = Math.floor(Math.random() * (particles.length - oscillationSubset));
     
     for (let i = startIdx; i < startIdx + oscillationSubset; i++) {
       const particle = particles[i];
       if (particle instanceof EnhancedParticle) {
         const time = now * particle.oscillationSpeed;
-        const offsetX = Math.cos(time + particle.oscillationOffset) * particle.oscillationRadius * 0.1;
-        const offsetY = Math.sin(time + particle.oscillationOffset) * particle.oscillationRadius * 0.1;
+        // Reduced oscillation magnitude by 50%
+        const offsetX = Math.cos(time + particle.oscillationOffset) * particle.oscillationRadius * 0.05;
+        const offsetY = Math.sin(time + particle.oscillationOffset) * particle.oscillationRadius * 0.05;
         
         particle.x += offsetX;
         particle.y += offsetY;
