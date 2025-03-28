@@ -32,13 +32,13 @@ const PreferencesForm: React.FC = () => {
   const handleAddItem = () => {
     if (!activeField || !newItem.trim()) return;
 
-    const updatedItems = [...profile.preferences[activeField], newItem.trim()];
+    const updatedItems = [...(profile.preferences[activeField] || []), newItem.trim()];
     updatePreferences.mutate({ [activeField]: updatedItems });
     setNewItem('');
   };
 
   const handleRemoveItem = (field: keyof Pick<UserPreferences, 'dietary_restrictions' | 'allergies' | 'preferred_cuisines'>, item: string) => {
-    const updatedItems = profile.preferences[field].filter(i => i !== item);
+    const updatedItems = (profile.preferences[field] || []).filter(i => i !== item);
     updatePreferences.mutate({ [field]: updatedItems });
   };
 
