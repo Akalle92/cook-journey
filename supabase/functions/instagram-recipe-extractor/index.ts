@@ -9,12 +9,26 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Debug mode flag - can be toggled via query parameter
+let DEBUG_MODE = false;
+
 // Handle CORS preflight requests
 function handleCors(req: Request) {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       headers: corsHeaders,
     });
+  }
+}
+
+// Helper function for consistent logging
+function logDebug(message: string, data?: any) {
+  if (DEBUG_MODE) {
+    if (data) {
+      console.log(`DEBUG: ${message}`, data);
+    } else {
+      console.log(`DEBUG: ${message}`);
+    }
   }
 }
 
@@ -31,63 +45,199 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "" // Use service role key for unrestricted access
     );
     
+    // Parse URL to check for debug parameter
+    const url = new URL(req.url);
+    DEBUG_MODE = url.searchParams.get('debug') === 'true';
+    
     // Parse request body
     let requestData;
     try {
       requestData = await req.json();
+      logDebug("Request data received:", requestData);
     } catch (error) {
       console.error("Error parsing request:", error);
-      throw new Error("Invalid request format");
+      return new Response(
+        JSON.stringify({
+          status: "error",
+          message: "Invalid request format",
+          error: {
+            name: error.name,
+            message: error.message,
+            stack: DEBUG_MODE ? error.stack : undefined
+          }
+        }),
+        {
+          status: 400,
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+        }
+      );
     }
     
-    const { url, userId } = requestData;
+    const { url: targetUrl, userId } = requestData;
     
-    if (!url) {
-      throw new Error("URL is required");
+    if (!targetUrl) {
+      return new Response(
+        JSON.stringify({
+          status: "error",
+          message: "URL is required",
+          details: "Please provide a valid URL to extract recipe from"
+        }),
+        {
+          status: 400,
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+        }
+      );
     }
     
     if (!userId) {
-      throw new Error("User ID is required");
+      return new Response(
+        JSON.stringify({
+          status: "error",
+          message: "User ID is required",
+          details: "Authentication is required to save recipes"
+        }),
+        {
+          status: 400,
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+        }
+      );
     }
 
-    console.log(`URL: ${url}, Source Type: unknown`);
+    logDebug(`Starting extraction for URL: ${targetUrl}`);
     
     // Determine the type of content source
-    const sourceType = determineSourceType(url);
-    console.log(`URL: ${url}, Source Type: ${sourceType}`);
+    const sourceType = determineSourceType(targetUrl);
+    logDebug(`URL: ${targetUrl}, Source Type: ${sourceType}`);
+    
+    // Prepare for extraction results gathering
+    let extractionResults = [];
     
     // Extract recipe data based on source type
-    let recipeData;
+    let recipeData = null;
     
     // Generic recipe extraction (supports multiple strategies)
-    console.log(`Generic recipe extraction for: ${url}`);
+    logDebug(`Generic recipe extraction for: ${targetUrl}`);
     
     // Strategy 1: Schema.org structured data
-    console.log(`Attempting schema.org extraction from: ${url}`);
-    recipeData = await extractSchemaRecipe(url);
+    logDebug(`Attempting schema.org extraction from: ${targetUrl}`);
+    try {
+      const schemaResult = await extractSchemaRecipe(targetUrl);
+      extractionResults.push({
+        method: "schema.org",
+        success: schemaResult.isRecipe,
+        confidence: schemaResult.confidence || 0,
+        data: DEBUG_MODE ? schemaResult : undefined
+      });
+      
+      if (schemaResult.isRecipe) {
+        recipeData = schemaResult;
+      }
+    } catch (error) {
+      console.error("Error in schema.org extraction:", error);
+      extractionResults.push({
+        method: "schema.org",
+        success: false,
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: DEBUG_MODE ? error.stack : undefined
+        }
+      });
+    }
     
     // Strategy 2: JSON-LD extraction
     if (!recipeData || !recipeData.isRecipe) {
-      console.log(`Attempting JSON-LD extraction from: ${url}`);
-      recipeData = await extractJsonLdRecipe(url);
+      logDebug(`Attempting JSON-LD extraction from: ${targetUrl}`);
+      try {
+        const jsonLdResult = await extractJsonLdRecipe(targetUrl);
+        extractionResults.push({
+          method: "json-ld",
+          success: jsonLdResult.isRecipe,
+          confidence: jsonLdResult.confidence || 0,
+          data: DEBUG_MODE ? jsonLdResult : undefined
+        });
+        
+        if (jsonLdResult.isRecipe) {
+          recipeData = jsonLdResult;
+        }
+      } catch (error) {
+        console.error("Error in JSON-LD extraction:", error);
+        extractionResults.push({
+          method: "json-ld",
+          success: false,
+          error: {
+            name: error.name,
+            message: error.message,
+            stack: DEBUG_MODE ? error.stack : undefined
+          }
+        });
+      }
     }
     
     // Strategy 3: Heuristic extraction for general websites
     if (!recipeData || !recipeData.isRecipe) {
-      console.log(`Attempting heuristic extraction from: ${url}`);
-      recipeData = await extractHeuristicRecipe(url);
+      logDebug(`Attempting heuristic extraction from: ${targetUrl}`);
+      try {
+        const heuristicResult = await extractHeuristicRecipe(targetUrl);
+        extractionResults.push({
+          method: "heuristic",
+          success: heuristicResult.isRecipe,
+          confidence: heuristicResult.confidence || 0,
+          data: DEBUG_MODE ? heuristicResult : undefined
+        });
+        
+        if (heuristicResult.isRecipe) {
+          recipeData = heuristicResult;
+        }
+      } catch (error) {
+        console.error("Error in heuristic extraction:", error);
+        extractionResults.push({
+          method: "heuristic",
+          success: false,
+          error: {
+            name: error.name,
+            message: error.message,
+            stack: DEBUG_MODE ? error.stack : undefined
+          }
+        });
+      }
     }
     
-    // If no extraction method worked, return error
+    // If no extraction method worked, return detailed error
     if (!recipeData || !recipeData.isRecipe) {
-      throw new Error("Could not extract recipe information from the provided URL");
+      return new Response(
+        JSON.stringify({
+          status: "error",
+          message: "Could not extract recipe information from the provided URL",
+          extractionResults,
+          suggestion: "Try using Claude AI to enhance this content, or check if the URL contains recipe information."
+        }),
+        {
+          status: 422, // Unprocessable Entity - semantically invalid
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+        }
+      );
     }
+    
+    logDebug("Recipe data successfully extracted:", recipeData);
     
     // Prepare recipe data for saving
     const recipe = {
       title: recipeData.recipe.title || "Untitled Recipe",
       description: recipeData.recipe.description || "",
-      source_url: url,
+      source_url: targetUrl,
       image_url: recipeData.recipe.image_url || "",
       instructions: recipeData.recipe.instructions || [],
       ingredients: recipeData.recipe.ingredients || [],
@@ -101,6 +251,8 @@ serve(async (req) => {
       difficulty_level: determineDifficulty(recipeData.recipe),
       user_id: userId, // Important: set the user_id to associate with the authenticated user
     };
+    
+    logDebug("Prepared recipe data for saving:", recipe);
     
     try {
       // Using service role key to bypass RLS
@@ -116,7 +268,8 @@ serve(async (req) => {
           JSON.stringify({
             status: "error",
             message: `Failed to save recipe: ${error.message}`,
-            details: error.details
+            details: error.details,
+            extractionResults
           }),
           {
             status: 400,
@@ -128,6 +281,8 @@ serve(async (req) => {
         );
       }
       
+      logDebug("Recipe successfully saved to database:", data);
+      
       // Return the saved recipe
       return new Response(
         JSON.stringify({
@@ -135,6 +290,7 @@ serve(async (req) => {
           data,
           method: recipeData.extractionMethod,
           confidence: recipeData.confidence,
+          extractionResults: DEBUG_MODE ? extractionResults : undefined
         }),
         {
           headers: { 
@@ -149,9 +305,15 @@ serve(async (req) => {
         JSON.stringify({
           status: "error",
           message: `Failed to save recipe: ${error.message}`,
+          error: {
+            name: error.name,
+            message: error.message,
+            stack: DEBUG_MODE ? error.stack : undefined
+          },
+          extractionResults
         }),
         {
-          status: 400,
+          status: 500,
           headers: { 
             "Content-Type": "application/json",
             ...corsHeaders
@@ -160,15 +322,21 @@ serve(async (req) => {
       );
     }
   } catch (error) {
-    // Return error response
+    // Return detailed error response
     console.error("Error processing URL:", error);
     return new Response(
       JSON.stringify({
         status: "error",
         message: error.message,
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: DEBUG_MODE ? error.stack : undefined
+        },
+        suggestion: "Try using Claude AI to enhance this content instead."
       }),
       {
-        status: 400,
+        status: 500,
         headers: { 
           "Content-Type": "application/json",
           ...corsHeaders
@@ -200,7 +368,8 @@ function determineSourceType(url: string): string {
     'allrecipes.com', 'foodnetwork.com', 'epicurious.com', 'bonappetit.com',
     'taste.com', 'delish.com', 'seriouseats.com', 'cookinglight.com',
     'eatingwell.com', 'simplyrecipes.com', 'food52.com', 'thekitchn.com',
-    'tasty.co', 'bbcgoodfood.com', 'cooking.nytimes.com', 'smittenkitchen.com'
+    'tasty.co', 'bbcgoodfood.com', 'cooking.nytimes.com', 'smittenkitchen.com',
+    'indianhealthyrecipes.com', 'taste.com.au', 'recipetineats.com', 'budgetbytes.com'
   ];
   
   for (const site of recipeWebsites) {
@@ -226,6 +395,7 @@ async function extractSchemaRecipe(url: string) {
     });
     
     if (!response.ok) {
+      logDebug(`Failed to fetch URL: ${url}, status: ${response.status}`);
       return { isRecipe: false };
     }
     
@@ -286,6 +456,7 @@ async function extractSchemaRecipe(url: string) {
     });
     
     if (recipeData) {
+      logDebug("Schema.org recipe data found:", recipeData);
       return {
         isRecipe: true,
         recipe: recipeData,
@@ -294,10 +465,11 @@ async function extractSchemaRecipe(url: string) {
       };
     }
     
+    logDebug("No Schema.org recipe data found");
     return { isRecipe: false };
   } catch (error) {
     console.error("Error in Schema extraction:", error);
-    return { isRecipe: false };
+    throw error;
   }
 }
 
@@ -314,6 +486,7 @@ async function extractJsonLdRecipe(url: string) {
     });
     
     if (!response.ok) {
+      logDebug(`Failed to fetch URL: ${url}, status: ${response.status}`);
       return { isRecipe: false };
     }
     
@@ -322,6 +495,7 @@ async function extractJsonLdRecipe(url: string) {
     
     // Find all JSON-LD scripts
     const jsonLdScripts = $('script[type="application/ld+json"]');
+    logDebug(`Found ${jsonLdScripts.length} JSON-LD scripts`);
     
     for (let i = 0; i < jsonLdScripts.length; i++) {
       try {
@@ -329,6 +503,7 @@ async function extractJsonLdRecipe(url: string) {
         if (!jsonText) continue;
         
         const jsonData = JSON.parse(jsonText);
+        logDebug(`Parsed JSON-LD script #${i+1}:`, jsonData);
         
         // Handle both direct Recipe objects and @graph arrays
         let recipeObject = null;
@@ -342,6 +517,8 @@ async function extractJsonLdRecipe(url: string) {
         }
         
         if (recipeObject) {
+          logDebug("Found Recipe object in JSON-LD:", recipeObject);
+          
           // Parse the recipe data
           const recipeData = {
             title: recipeObject.name || '',
@@ -360,6 +537,7 @@ async function extractJsonLdRecipe(url: string) {
           // Get ingredients
           if (recipeObject.recipeIngredient && Array.isArray(recipeObject.recipeIngredient)) {
             recipeData.ingredients = recipeObject.recipeIngredient;
+            logDebug("Found ingredients:", recipeData.ingredients);
           }
           
           // Get instructions
@@ -378,6 +556,7 @@ async function extractJsonLdRecipe(url: string) {
                 .map(s => s.trim())
                 .filter(s => s);
             }
+            logDebug("Found instructions:", recipeData.instructions);
           }
           
           return {
@@ -393,10 +572,11 @@ async function extractJsonLdRecipe(url: string) {
       }
     }
     
+    logDebug("No recipe data found in JSON-LD scripts");
     return { isRecipe: false };
   } catch (error) {
     console.error("Error in JSON-LD extraction:", error);
-    return { isRecipe: false };
+    throw error;
   }
 }
 
@@ -413,6 +593,7 @@ async function extractHeuristicRecipe(url: string) {
     });
     
     if (!response.ok) {
+      logDebug(`Failed to fetch URL: ${url}, status: ${response.status}`);
       return { isRecipe: false };
     }
     
@@ -435,6 +616,7 @@ async function extractHeuristicRecipe(url: string) {
     
     // Extract title - prioritize heading elements
     recipeData.title = $('h1').first().text().trim() || $('title').text().trim();
+    logDebug("Heuristic found title:", recipeData.title);
     
     // Extract main image
     recipeData.image_url = $('meta[property="og:image"]').attr('content') ||
@@ -456,11 +638,13 @@ async function extractHeuristicRecipe(url: string) {
         }
       });
     }
+    logDebug("Heuristic found image:", recipeData.image_url);
     
     // Extract description
     recipeData.description = $('meta[property="og:description"]').attr('content') || 
                           $('meta[name="description"]').attr('content') || 
                           $('.recipe-description, .description, .summary').first().text().trim();
+    logDebug("Heuristic found description:", recipeData.description);
     
     // Extract ingredients - common ingredient selectors
     const ingredientSelectors = [
@@ -482,7 +666,10 @@ async function extractHeuristicRecipe(url: string) {
         }
       });
       
-      if (recipeData.ingredients.length > 0) break;
+      if (recipeData.ingredients.length > 0) {
+        logDebug(`Found ingredients using selector: ${selector}`, recipeData.ingredients);
+        break;
+      }
     }
     
     // If no ingredients found yet, look for common ingredient container patterns
@@ -496,6 +683,7 @@ async function extractHeuristicRecipe(url: string) {
             .filter(line => line.length > 5 && line.length < 200);
           
           recipeData.ingredients = lines;
+          logDebug("Found ingredients in container:", recipeData.ingredients);
           return false; // break loop if found
         }
       });
@@ -522,7 +710,10 @@ async function extractHeuristicRecipe(url: string) {
         }
       });
       
-      if (recipeData.instructions.length > 0) break;
+      if (recipeData.instructions.length > 0) {
+        logDebug(`Found instructions using selector: ${selector}`, recipeData.instructions);
+        break;
+      }
     }
     
     // If no instructions found yet, look for paragraphs in instruction containers
@@ -533,6 +724,10 @@ async function extractHeuristicRecipe(url: string) {
           recipeData.instructions.push(text);
         }
       });
+      
+      if (recipeData.instructions.length > 0) {
+        logDebug("Found instructions in paragraphs:", recipeData.instructions);
+      }
     }
     
     // Extract prep and cook times
@@ -548,8 +743,10 @@ async function extractHeuristicRecipe(url: string) {
         
         if ($(el).hasClass('prep-time') || $(el).attr('itemprop') === 'prepTime') {
           recipeData.prep_time = minutes;
+          logDebug("Found prep time:", minutes);
         } else if ($(el).hasClass('cook-time') || $(el).attr('itemprop') === 'cookTime') {
           recipeData.cook_time = minutes;
+          logDebug("Found cook time:", minutes);
         }
       }
     });
@@ -562,11 +759,13 @@ async function extractHeuristicRecipe(url: string) {
       
       if (match) {
         recipeData.servings = parseInt(match[1] || match[2]);
+        logDebug("Found servings:", recipeData.servings);
       } else if (text.match(/\d+/)) {
         // Just try to find the first number if the regex didn't work
         const numMatch = text.match(/\d+/);
         if (numMatch) {
           recipeData.servings = parseInt(numMatch[0]);
+          logDebug("Found servings (fallback):", recipeData.servings);
         }
       }
     });
@@ -581,6 +780,8 @@ async function extractHeuristicRecipe(url: string) {
     if (recipeData.instructions.length > 1) confidence += 0.2;
     if (recipeData.prep_time || recipeData.cook_time) confidence += 0.1;
     
+    logDebug("Heuristic extraction confidence score:", confidence);
+    
     // Only consider it a recipe if we have some minimum content
     if (recipeData.ingredients.length > 0 && recipeData.instructions.length > 0) {
       return {
@@ -594,7 +795,7 @@ async function extractHeuristicRecipe(url: string) {
     return { isRecipe: false };
   } catch (error) {
     console.error("Error in heuristic extraction:", error);
-    return { isRecipe: false };
+    throw error;
   }
 }
 
@@ -639,4 +840,15 @@ function determineDifficulty(recipe: any): string {
   if (avgScore < 1.7) return 'Easy';
   if (avgScore < 2.5) return 'Medium';
   return 'Hard';
+}
+
+// Helper to log HTML structure for debugging
+function logDebug(message: string, data?: any) {
+  if (DEBUG_MODE) {
+    if (data) {
+      console.log(`DEBUG: ${message}`, data);
+    } else {
+      console.log(`DEBUG: ${message}`);
+    }
+  }
 }

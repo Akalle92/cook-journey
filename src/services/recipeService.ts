@@ -174,8 +174,8 @@ export const deleteRecipe = async (recipeId: string): Promise<void> => {
 };
 
 // Extract recipe from URL using our universal recipe extractor edge function
-export const extractRecipeFromUrl = async (url: string): Promise<Recipe> => {
-  console.log(`Extracting recipe from URL: ${url}`);
+export const extractRecipeFromUrl = async (url: string, debugMode: boolean = false): Promise<Recipe> => {
+  console.log(`Extracting recipe from URL: ${url}, Debug mode: ${debugMode}`);
   
   try {
     // Get the current user's ID to associate with the recipe
@@ -193,7 +193,9 @@ export const extractRecipeFromUrl = async (url: string): Promise<Recipe> => {
       body: {
         url: cleanUrl,
         userId: user.id
-      }
+      },
+      // Add debug parameter to function URL if debug mode is enabled
+      query: debugMode ? { debug: 'true' } : undefined
     });
     
     if (error) {
@@ -208,17 +210,35 @@ export const extractRecipeFromUrl = async (url: string): Promise<Recipe> => {
     
     console.log('Extraction successful - extracted data:', data);
     
-    // Return the extracted recipe
-    return mapToRecipe(data.data);
+    // Return the extracted recipe with extraction metadata
+    return {
+      ...mapToRecipe(data.data),
+      method: data.method,
+      confidence: data.confidence,
+      extractionResults: data.extractionResults
+    };
   } catch (error: any) {
     console.error('Error in extractRecipeFromUrl:', error);
+    
+    // Enhanced error handling for better debugging
+    if (error.response) {
+      const responseError = {
+        ...error,
+        response: {
+          ...error.response,
+          data: error.response.data
+        }
+      };
+      throw responseError;
+    }
+    
     throw new Error(error.message || 'Failed to extract recipe. Please try again.');
   }
 };
 
 // Extract and enhance recipe using Claude AI
-export const enhanceRecipeWithClaude = async (url: string): Promise<Recipe> => {
-  console.log(`Enhancing recipe from URL with Claude: ${url}`);
+export const enhanceRecipeWithClaude = async (url: string, debugMode: boolean = false): Promise<Recipe> => {
+  console.log(`Enhancing recipe from URL with Claude: ${url}, Debug mode: ${debugMode}`);
   
   try {
     // Get the current user's ID to associate with the recipe
@@ -236,7 +256,9 @@ export const enhanceRecipeWithClaude = async (url: string): Promise<Recipe> => {
       body: {
         url: cleanUrl,
         userId: user.id
-      }
+      },
+      // Add debug parameter to function URL if debug mode is enabled
+      query: debugMode ? { debug: 'true' } : undefined
     });
     
     if (error) {
@@ -251,8 +273,11 @@ export const enhanceRecipeWithClaude = async (url: string): Promise<Recipe> => {
     
     console.log('Claude enhancement successful - data:', data);
     
-    // Return the enhanced recipe
-    return mapToRecipe(data.data);
+    // Return the enhanced recipe with debug info
+    return {
+      ...mapToRecipe(data.data),
+      debugInfo: data.debugInfo
+    };
   } catch (error: any) {
     console.error('Error in enhanceRecipeWithClaude:', error);
     throw new Error(error.message || 'Failed to enhance recipe. Please try again.');
