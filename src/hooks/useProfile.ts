@@ -19,7 +19,9 @@ export const useProfile = () => {
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Ensure the data conforms to our Profile type
+    return data as Profile;
   };
 
   const { data: profile, isLoading, error } = useQuery({
@@ -34,13 +36,13 @@ export const useProfile = () => {
 
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(updates as any)
         .eq('id', user.id)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return data as Profile;
     },
     onSuccess: (data) => {
       queryClient.setQueryData(['profile', user?.id], data);
@@ -69,13 +71,13 @@ export const useProfile = () => {
 
       const { data, error } = await supabase
         .from('profiles')
-        .update({ preferences: updatedPreferences })
+        .update({ preferences: updatedPreferences as any })
         .eq('id', user.id)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return data as Profile;
     },
     onSuccess: (data) => {
       queryClient.setQueryData(['profile', user?.id], data);
@@ -122,7 +124,7 @@ export const useProfile = () => {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as Profile;
     },
     onSuccess: (data) => {
       queryClient.setQueryData(['profile', user?.id], data);

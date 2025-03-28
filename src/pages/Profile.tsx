@@ -9,6 +9,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import AuthModal from '@/components/Auth/AuthModal';
+import { Button } from '@/components/ui/button';
 
 const Profile = () => {
   const { user } = useAuth();

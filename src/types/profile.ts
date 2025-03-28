@@ -6,6 +6,7 @@ export interface UserPreferences {
   allergies: string[];
   preferred_cuisines: string[];
   theme: 'light' | 'dark';
+  [key: string]: string | string[] | number | boolean | null;
 }
 
 export interface Profile {
