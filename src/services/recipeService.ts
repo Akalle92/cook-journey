@@ -4,17 +4,47 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Convert Supabase recipe data to our Recipe type
 const mapToRecipe = (item: any): Recipe => {
+  // Handle ingredients that might be stored as a JSON string
+  let ingredients = [];
+  try {
+    if (Array.isArray(item.ingredients)) {
+      ingredients = item.ingredients; 
+    } else if (typeof item.ingredients === 'string') {
+      ingredients = JSON.parse(item.ingredients);
+    } else if (typeof item.ingredients === 'object' && item.ingredients !== null) {
+      // Handle JSON object format
+      ingredients = Array.isArray(item.ingredients) ? item.ingredients : [];
+    }
+  } catch (error) {
+    console.error('Error parsing ingredients:', error);
+    ingredients = [];
+  }
+
+  // Handle instructions that might be stored as a JSON string
+  let instructions = [];
+  try {
+    if (Array.isArray(item.instructions)) {
+      instructions = item.instructions;
+    } else if (typeof item.instructions === 'string') {
+      instructions = JSON.parse(item.instructions);
+    } else if (typeof item.instructions === 'object' && item.instructions !== null) {
+      // Handle JSON object format
+      instructions = Array.isArray(item.instructions) ? item.instructions : [];
+    }
+  } catch (error) {
+    console.error('Error parsing instructions:', error);
+    instructions = [];
+  }
+
   return {
     id: item.id,
-    title: item.title,
+    title: item.title || 'Untitled Recipe',
     image: item.image_url || 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80&w=1000&auto=format&fit=crop',
     category: item.category || 'Uncategorized',
     prepTime: item.prep_time ? `${item.prep_time} min` : 'N/A',
     difficulty: determineDifficulty(item.prep_time, item.cook_time),
-    ingredients: Array.isArray(item.ingredients) ? item.ingredients : 
-                (typeof item.ingredients === 'string' ? JSON.parse(item.ingredients) : []),
-    instructions: Array.isArray(item.instructions) ? item.instructions : 
-                 (typeof item.instructions === 'string' ? JSON.parse(item.instructions) : [])
+    ingredients: ingredients,
+    instructions: instructions
   };
 };
 
@@ -30,6 +60,7 @@ const determineDifficulty = (prepTime?: number, cookTime?: number): 'Easy' | 'Me
 // Fetch recipes from Supabase
 export const fetchRecipes = async (): Promise<Recipe[]> => {
   try {
+    console.log('Fetching recipes from Supabase...');
     const { data, error } = await supabase
       .from('recipes')
       .select('*')
@@ -40,12 +71,17 @@ export const fetchRecipes = async (): Promise<Recipe[]> => {
       throw error;
     }
     
+    console.log('Raw recipe data from Supabase:', data);
+    
     // If no data yet, return mock recipes (for demo purposes)
     if (!data || data.length === 0) {
+      console.log('No recipes found in database, returning mock data');
       return mockRecipes;
     }
     
-    return data.map(mapToRecipe);
+    const mappedRecipes = data.map(mapToRecipe);
+    console.log('Mapped recipes:', mappedRecipes);
+    return mappedRecipes;
   } catch (error) {
     console.error('Error in fetchRecipes:', error);
     return mockRecipes;
@@ -112,7 +148,7 @@ export const extractRecipeFromUrl = async (url: string): Promise<Recipe> => {
       throw new Error(data?.message || 'Failed to extract recipe from URL');
     }
     
-    console.log('Extraction successful:', data);
+    console.log('Extraction successful - extracted data:', data);
     
     // Return the extracted recipe
     return mapToRecipe(data.data);
@@ -217,3 +253,4 @@ const mockRecipes: Recipe[] = [
     ]
   }
 ];
+

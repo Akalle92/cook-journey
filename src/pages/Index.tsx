@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Header from '@/components/Header';
 import RecipeUrlInput from '@/components/RecipeUrlInput';
@@ -19,16 +19,32 @@ const Index = () => {
   const queryClient = useQueryClient();
   
   // Fetch recipes using React Query
-  const { data: recipes = [], isLoading: isLoadingRecipes } = useQuery({
+  const { data: recipes = [], isLoading: isLoadingRecipes, isError: isRecipesError } = useQuery({
     queryKey: ['recipes'],
     queryFn: fetchRecipes,
     staleTime: 60000, // 1 minute
+    retry: 3,
+    onError: (error: any) => {
+      console.error('Failed to load recipes:', error);
+      toast({
+        title: "Error Loading Recipes",
+        description: "There was a problem loading your recipes. Please try again later.",
+        variant: "destructive",
+      });
+    }
   });
+  
+  // Log recipes data for debugging
+  useEffect(() => {
+    console.log('Recipes from React Query:', recipes);
+  }, [recipes]);
   
   // Set up mutation for recipe extraction
   const extractRecipeMutation = useMutation({
     mutationFn: extractRecipeFromUrl,
     onSuccess: (newRecipe) => {
+      console.log('Successfully extracted recipe:', newRecipe);
+      
       // Update the recipes in the cache with the new recipe
       queryClient.setQueryData(['recipes'], (oldData: Recipe[] = []) => {
         return [newRecipe, ...oldData];
@@ -43,6 +59,9 @@ const Index = () => {
         description: "Your recipe has been successfully extracted!",
         variant: "default",
       });
+      
+      // Refetch the recipes to ensure we have the latest data
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
     },
     onError: (error: any) => {
       console.error("Error extracting recipe:", error);
@@ -97,9 +116,13 @@ const Index = () => {
           <div className="text-center py-8">
             <p className="text-muted-foreground">Loading recipes...</p>
           </div>
+        ) : isRecipesError ? (
+          <div className="text-center py-8">
+            <p className="text-destructive">Error loading recipes. Please try again later.</p>
+          </div>
         ) : (
           <>
-            {recipes.length > 0 ? (
+            {recipes && recipes.length > 0 ? (
               <>
                 <TrendingRecipes recipes={recipes.slice(0, 5)} onRecipeClick={handleRecipeClick} />
                 
