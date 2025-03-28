@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Instagram, ArrowRight, Lock, Link2 } from 'lucide-react';
+import { Instagram, ArrowRight, Lock, Link2, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +15,7 @@ interface InstagramUrlInputProps {
 const InstagramUrlInput: React.FC<InstagramUrlInputProps> = ({ onSubmit, isLoading }) => {
   const [url, setUrl] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isValidUrl, setIsValidUrl] = useState<boolean | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -22,6 +23,18 @@ const InstagramUrlInput: React.FC<InstagramUrlInputProps> = ({ onSubmit, isLoadi
   const isValidInstagramUrl = (url: string): boolean => {
     const instagramUrlPattern = /instagram\.com\/(p|reel|stories)\/[^\/\s]+/i;
     return instagramUrlPattern.test(url);
+  };
+
+  // Update validation state when URL changes
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUrl = e.target.value;
+    setUrl(newUrl);
+    
+    if (newUrl.trim() === '') {
+      setIsValidUrl(null); // No validation for empty input
+    } else {
+      setIsValidUrl(isValidInstagramUrl(newUrl));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -63,15 +76,37 @@ const InstagramUrlInput: React.FC<InstagramUrlInputProps> = ({ onSubmit, isLoadi
       const clipboardText = await navigator.clipboard.readText();
       if (clipboardText && clipboardText.includes('instagram.com')) {
         setUrl(clipboardText);
+        setIsValidUrl(isValidInstagramUrl(clipboardText));
         toast({
           title: "URL Pasted",
           description: "Instagram URL detected and pasted",
         });
+      } else if (clipboardText) {
+        setUrl(clipboardText);
+        setIsValidUrl(isValidInstagramUrl(clipboardText));
+        if (!isValidInstagramUrl(clipboardText)) {
+          toast({
+            title: "Not an Instagram URL",
+            description: "The pasted URL doesn't appear to be from Instagram",
+            variant: "destructive",
+          });
+        }
       }
     } catch (err) {
       // Handle clipboard permission issues silently
       console.log("Clipboard access denied");
+      toast({
+        title: "Clipboard Access Denied",
+        description: "Please allow clipboard access or paste the URL manually",
+        variant: "destructive",
+      });
     }
+  };
+
+  // Get the input's border color based on validation state
+  const getInputBorderClass = () => {
+    if (isValidUrl === null) return "border-muted";
+    return isValidUrl ? "border-green-500" : "border-red-500";
   };
 
   return (
@@ -86,13 +121,14 @@ const InstagramUrlInput: React.FC<InstagramUrlInputProps> = ({ onSubmit, isLoadi
             
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Instagram className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                <Instagram className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isValidUrl === false ? 'text-red-500' : isValidUrl ? 'text-green-500' : 'text-muted-foreground'}`} />
                 <Input
                   type="url"
                   placeholder="https://www.instagram.com/p/..."
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="pl-10 pr-4 py-6 bg-charcoal border-muted font-mono text-sm"
+                  onChange={handleUrlChange}
+                  className={`pl-10 pr-12 py-6 bg-charcoal font-mono text-sm ${getInputBorderClass()} transition-colors`}
+                  aria-invalid={isValidUrl === false}
                 />
                 <Button 
                   type="button" 
@@ -107,12 +143,13 @@ const InstagramUrlInput: React.FC<InstagramUrlInputProps> = ({ onSubmit, isLoadi
               
               <Button 
                 type="submit" 
-                disabled={isLoading}
+                disabled={isLoading || (url.trim() !== '' && !isValidUrl)}
                 className="cta-button"
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
-                    <span className="animate-pulse">Processing</span>
+                    <RotateCw className="h-4 w-4 animate-spin" />
+                    <span>Processing</span>
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
@@ -122,6 +159,12 @@ const InstagramUrlInput: React.FC<InstagramUrlInputProps> = ({ onSubmit, isLoadi
                 )}
               </Button>
             </div>
+            
+            {isValidUrl === false && url.trim() !== '' && (
+              <p className="text-xs text-red-500 mt-2">
+                Please enter a valid Instagram post, reel, or story URL
+              </p>
+            )}
             
             {!user && (
               <p className="text-xs text-offwhite/50 mt-3">
