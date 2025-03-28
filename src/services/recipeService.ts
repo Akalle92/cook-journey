@@ -1,4 +1,3 @@
-
 import { Recipe } from '@/components/RecipeCard';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -214,6 +213,49 @@ export const extractRecipeFromUrl = async (url: string): Promise<Recipe> => {
   } catch (error: any) {
     console.error('Error in extractRecipeFromUrl:', error);
     throw new Error(error.message || 'Failed to extract recipe. Please try again.');
+  }
+};
+
+// Extract and enhance recipe using Claude AI
+export const enhanceRecipeWithClaude = async (url: string): Promise<Recipe> => {
+  console.log(`Enhancing recipe from URL with Claude: ${url}`);
+  
+  try {
+    // Get the current user's ID to associate with the recipe
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('You must be logged in to generate recipes');
+    }
+    
+    // Clean the URL before sending
+    let cleanUrl = url.trim();
+    
+    // Call our Claude recipe generator edge function
+    const { data, error } = await supabase.functions.invoke('claude-recipe-generator', {
+      body: {
+        url: cleanUrl,
+        userId: user.id
+      }
+    });
+    
+    if (error) {
+      console.error('Error calling Claude recipe generator:', error);
+      throw new Error(error.message || 'Failed to generate recipe');
+    }
+    
+    if (!data || data.status === 'error') {
+      console.error('Claude enhancement failed:', data);
+      throw new Error(data?.message || 'Failed to enhance recipe from URL');
+    }
+    
+    console.log('Claude enhancement successful - data:', data);
+    
+    // Return the enhanced recipe
+    return mapToRecipe(data.data);
+  } catch (error: any) {
+    console.error('Error in enhanceRecipeWithClaude:', error);
+    throw new Error(error.message || 'Failed to enhance recipe. Please try again.');
   }
 };
 

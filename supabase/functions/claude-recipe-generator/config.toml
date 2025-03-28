@@ -1,0 +1,7 @@
+
+project_id = "mpwmosaxjdeqaazzejwe"
+
+[api]
+gen_dir = ".node/types"
+autocommit = false
+
