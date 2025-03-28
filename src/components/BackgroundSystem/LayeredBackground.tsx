@@ -27,6 +27,7 @@ export const LayeredBackground: React.FC<LayeredBackgroundProps> = ({ className 
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
   const [isMouseMoving, setIsMouseMoving] = useState(false);
   const [isWindowFocused, setIsWindowFocused] = useState(true);
+  const mouseMovingTimeoutRef = useRef<number | null>(null);
   
   // Time-based gradient configurations
   const timeGradients = {
@@ -100,8 +101,11 @@ export const LayeredBackground: React.FC<LayeredBackgroundProps> = ({ className 
       setIsMouseMoving(true);
       
       // Reset mouse moving state after some time of inactivity
-      clearTimeout(mouseMovingTimeout);
-      const mouseMovingTimeout = setTimeout(() => {
+      if (mouseMovingTimeoutRef.current) {
+        clearTimeout(mouseMovingTimeoutRef.current);
+      }
+      
+      mouseMovingTimeoutRef.current = window.setTimeout(() => {
         setIsMouseMoving(false);
       }, 2000);
     };
@@ -110,6 +114,9 @@ export const LayeredBackground: React.FC<LayeredBackgroundProps> = ({ className 
     
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      if (mouseMovingTimeoutRef.current) {
+        clearTimeout(mouseMovingTimeoutRef.current);
+      }
     };
   }, []);
 
