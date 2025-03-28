@@ -1,4 +1,3 @@
-
 import { Recipe } from '@/components/RecipeCard';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -11,8 +10,10 @@ const mapToRecipe = (item: any): Recipe => {
     category: item.category || 'Uncategorized',
     prepTime: item.prep_time ? `${item.prep_time} min` : 'N/A',
     difficulty: determineDifficulty(item.prep_time, item.cook_time),
-    ingredients: item.ingredients || [],
-    instructions: item.instructions || []
+    ingredients: Array.isArray(item.ingredients) ? item.ingredients : 
+                (typeof item.ingredients === 'string' ? JSON.parse(item.ingredients) : []),
+    instructions: Array.isArray(item.instructions) ? item.instructions : 
+                 (typeof item.instructions === 'string' ? JSON.parse(item.instructions) : [])
   };
 };
 
@@ -50,143 +51,37 @@ export const fetchRecipes = async (): Promise<Recipe[]> => {
   }
 };
 
-// Parse Instagram URL to extract post ID
-const extractInstagramPostId = (url: string): string | null => {
-  // Handle various Instagram URL formats
-  const patterns = [
-    /instagram.com\/p\/([^\/\?]+)/i,      // Regular post: instagram.com/p/ABC123
-    /instagram.com\/reel\/([^\/\?]+)/i,   // Reels: instagram.com/reel/ABC123
-    /instagram.com\/stories\/[^\/]+\/([^\/\?]+)/i  // Stories: instagram.com/stories/username/ABC123
-  ];
-  
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match && match[1]) {
-      return match[1];
-    }
-  }
-  
-  return null;
-};
-
-// Generate a recipe title from the instagram post content
-const generateRecipeTitle = (content: string): string => {
-  // First try to extract a title from common patterns
-  const titlePatterns = [
-    /recipe for ([^\.]+)/i,
-    /how to make ([^\.]+)/i,
-    /homemade ([^\.]+)/i,
-    /([^\.]{3,40}) recipe/i,
-  ];
-  
-  for (const pattern of titlePatterns) {
-    const match = content.match(pattern);
-    if (match && match[1]) {
-      // Capitalize first letter of each word
-      return match[1].split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
-    }
-  }
-  
-  // If no title found, use the first 5-8 words
-  const words = content.split(' ');
-  const titleWords = words.slice(0, Math.min(words.length, 6));
-  return titleWords.join(' ') + (titleWords.length < words.length ? '...' : '');
-};
-
-// Extract recipe from Instagram URL and save to Supabase
+// Extract recipe from Instagram URL using our edge function
 export const extractRecipeFromInstagram = async (url: string): Promise<Recipe> => {
   console.log(`Extracting recipe from URL: ${url}`);
   
   try {
-    // Extract the Instagram post ID
-    const postId = extractInstagramPostId(url);
-    if (!postId) {
-      throw new Error('Invalid Instagram URL. Please provide a valid Instagram post URL.');
+    // Get the current user's ID to associate with the recipe
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('You must be logged in to extract recipes');
     }
     
-    // In a real app, we would call an API to fetch the Instagram post data
-    // For now, we'll simulate that by generating a recipe based on the post ID
-    const mockInstagramData = {
-      caption: `Delicious Avocado Toast recipe for breakfast! Perfect for a quick, healthy start to your day.\n\nIngredients:\n- 2 ripe avocados\n- 4 slices sourdough bread\n- 2 eggs\n- Fresh lime juice\n- Red pepper flakes\n- Salt and pepper to taste\n- Olive oil\n\nInstructions:\n1. Toast the sourdough bread until golden and crispy.\n2. Mash the avocados in a bowl with lime juice, salt and pepper.\n3. Spread the avocado mixture on the toast.\n4. Heat olive oil in a pan and fry the eggs sunny side up for about 3 minutes.\n5. Place the fried eggs on top of the avocado toast.\n6. Sprinkle with red pepper flakes and serve immediately.\n\n#avocadotoast #breakfast #healthyfood #quickmeals`,
-      image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?q=80&w=1000&auto=format&fit=crop'
-    };
-    
-    // Parse ingredients and instructions from the caption
-    const ingredients: string[] = [];
-    const instructions: string[] = [];
-    
-    // Extract ingredients
-    const ingredientsMatch = mockInstagramData.caption.match(/ingredients:(.+?)instructions:/is);
-    if (ingredientsMatch && ingredientsMatch[1]) {
-      const ingredientsText = ingredientsMatch[1].trim();
-      ingredientsText.split('\n').forEach(line => {
-        const ingredient = line.replace(/^-\s*/, '').trim();
-        if (ingredient) ingredients.push(ingredient);
-      });
-    }
-    
-    // Extract instructions
-    const instructionsMatch = mockInstagramData.caption.match(/instructions:(.+?)(?:#|$)/is);
-    if (instructionsMatch && instructionsMatch[1]) {
-      const instructionsText = instructionsMatch[1].trim();
-      instructionsText.split('\n').forEach(line => {
-        const instruction = line.replace(/^\d+\.\s*/, '').trim();
-        if (instruction) instructions.push(instruction);
-      });
-    }
-    
-    // Generate a title from the caption
-    const title = generateRecipeTitle(mockInstagramData.caption);
-    
-    // Determine a category
-    let category = 'Other';
-    const categoryKeywords = {
-      'Breakfast': ['breakfast', 'morning', 'brunch', 'toast', 'eggs', 'pancake', 'waffle'],
-      'Lunch': ['lunch', 'sandwich', 'salad', 'wrap'],
-      'Dinner': ['dinner', 'supper', 'roast', 'steak', 'pasta'],
-      'Dessert': ['dessert', 'cake', 'pie', 'cookie', 'sweet', 'chocolate', 'ice cream'],
-      'Appetizer': ['appetizer', 'starter', 'snack', 'dip', 'finger food'],
-      'Drink': ['drink', 'cocktail', 'smoothie', 'juice', 'beverage']
-    };
-    
-    for (const [cat, keywords] of Object.entries(categoryKeywords)) {
-      if (keywords.some(keyword => mockInstagramData.caption.toLowerCase().includes(keyword))) {
-        category = cat;
-        break;
+    // Call our Supabase Edge Function to extract the recipe
+    const { data, error } = await supabase.functions.invoke('instagram-recipe-extractor', {
+      body: {
+        url: url,
+        userId: user.id
       }
-    }
-    
-    // Estimate prep time (for demonstration purposes)
-    const prepTime = Math.max(5, Math.min(30, instructions.length * 5));
-    
-    // Create a new recipe object
-    const newRecipe = {
-      title,
-      description: mockInstagramData.caption.split('\n')[0],
-      image_url: mockInstagramData.image,
-      category,
-      prep_time: prepTime,
-      ingredients,
-      instructions,
-      source_url: url,
-      tags: mockInstagramData.caption.match(/#\w+/g)?.map(tag => tag.slice(1)) || []
-    };
-    
-    // Save the recipe to Supabase
-    const { data, error } = await supabase
-      .from('recipes')
-      .insert(newRecipe)
-      .select()
-      .single();
+    });
     
     if (error) {
-      console.error('Error saving recipe to Supabase:', error);
-      throw error;
+      console.error('Error calling instagram-recipe-extractor:', error);
+      throw new Error(error.message || 'Failed to extract recipe');
     }
     
-    return mapToRecipe(data);
+    if (!data || data.status === 'error') {
+      throw new Error(data?.message || 'Failed to extract recipe from Instagram');
+    }
+    
+    // Return the extracted recipe
+    return mapToRecipe(data.data);
   } catch (error: any) {
     console.error('Error in extractRecipeFromInstagram:', error);
     throw new Error(error.message || 'Failed to extract recipe from Instagram. Please try again.');
@@ -288,4 +183,3 @@ const mockRecipes: Recipe[] = [
     ]
   }
 ];
-
