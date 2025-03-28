@@ -1,9 +1,10 @@
 
-import React from 'react';
-import { Clock, Utensils, ChefHat } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, Utensils, ChefHat, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { GlassCard, GlassCardContent } from '@/components/ui/glass-card';
 import { useBackground } from '@/components/BackgroundSystem/BackgroundContext';
+import { cn } from '@/lib/utils';
 
 export interface Recipe {
   id: string;
@@ -35,30 +36,72 @@ const categoryToCuisine = {
   // Default handled in component
 };
 
+// Map categories to material textures
+const categoryToMaterial = {
+  'Italian': 'material-marble',
+  'Mediterranean': 'material-marble',
+  'Japanese': 'material-ceramic',
+  'Thai': 'material-ceramic', 
+  'Chinese': 'material-ceramic',
+  'Mexican': 'material-wood',
+  'Indian': 'material-wood',
+  'Nordic': 'material-wood',
+  'Scandinavian': 'material-wood',
+  // Default handled in component
+};
+
+// Map difficulty to accent positions
+const difficultyToAccent = {
+  'Easy': 'bottom',
+  'Medium': 'left',
+  'Hard': 'top',
+};
+
 const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
   const { setCuisineType } = useBackground();
+  const [isHovered, setIsHovered] = useState(false);
   
   // Set the cuisine type based on the recipe category when hovering over card
   const handleMouseEnter = () => {
     const cuisineType = (categoryToCuisine[recipe.category as keyof typeof categoryToCuisine] || 'default') as any;
     setCuisineType(cuisineType);
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
   };
 
   // Get accent position based on difficulty
   const getAccentPosition = () => {
-    switch (recipe.difficulty) {
-      case 'Easy': return 'bottom';
-      case 'Medium': return 'left';
-      case 'Hard': return 'top';
-      default: return 'none';
+    return difficultyToAccent[recipe.difficulty] || 'none';
+  };
+
+  // Get material class based on category
+  const getMaterialClass = () => {
+    return categoryToMaterial[recipe.category as keyof typeof categoryToMaterial] || 'material-ceramic';
+  };
+
+  // Get difficulty color
+  const getDifficultyColor = () => {
+    switch(recipe.difficulty) {
+      case 'Easy': return 'text-emerald';
+      case 'Medium': return 'text-amber';
+      case 'Hard': return 'text-coral';
+      default: return 'text-teal';
     }
   };
 
   return (
     <GlassCard 
-      className="w-full overflow-hidden group"
+      className={cn(
+        "w-full overflow-hidden group transition-all duration-500",
+        getMaterialClass(),
+        isHovered ? "shadow-card-hover transform scale-[1.02]" : "shadow-card"
+      )}
       onClick={() => onClick(recipe)}
       onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       interactive={true}
       accentPosition={getAccentPosition()}
     >
@@ -67,17 +110,23 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
         <img 
           src={recipe.image} 
           alt={recipe.title} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
-        <Badge className="absolute top-3 right-3 z-20 bg-teal text-charcoal font-mono text-xs">
+        <Badge className="absolute top-3 right-3 z-20 bg-gradient-primary text-charcoal font-mono text-xs">
           {recipe.category}
         </Badge>
+        <div className="absolute bottom-3 right-3 z-20 flex items-center">
+          <div className="flex items-center bg-charcoal/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-xs font-mono">
+            <Star className="h-3 w-3 text-gold mr-1 fill-gold" />
+            <span>4.5</span>
+          </div>
+        </div>
       </div>
       
       <GlassCardContent className="p-4">
-        <h3 className="font-serif text-xl font-bold mb-2 line-clamp-2 transition-all duration-300 group-hover:text-teal">{recipe.title}</h3>
+        <h3 className="font-clash text-xl font-bold mb-2 line-clamp-2 transition-all duration-300 group-hover:text-gradient">{recipe.title}</h3>
         
-        <div className="flex items-center gap-3 text-sm text-offwhite/70 mt-4">
+        <div className="flex items-center gap-3 text-xs font-mono text-offwhite/70 mt-4">
           <div className="flex items-center gap-1.5">
             <Clock className="h-4 w-4 text-coral transition-transform duration-300 group-hover:scale-110" />
             <span>{recipe.prepTime}</span>
@@ -89,8 +138,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
           </div>
           
           <div className="flex items-center gap-1.5">
-            <ChefHat className="h-4 w-4 text-teal transition-transform duration-300 group-hover:scale-110" />
-            <span>{recipe.difficulty}</span>
+            <ChefHat className={`h-4 w-4 transition-transform duration-300 group-hover:scale-110 ${getDifficultyColor()}`} />
+            <span className={getDifficultyColor()}>{recipe.difficulty}</span>
           </div>
         </div>
       </GlassCardContent>
