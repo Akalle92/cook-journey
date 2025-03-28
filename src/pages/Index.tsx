@@ -104,7 +104,7 @@ const Index = () => {
   return <div className="min-h-screen grid-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-6 bg-inherit">
+      <main className="container mx-auto px-4 py-6 bg-black">
         <div className="max-w-3xl mx-auto mb-12">
           <RecipeUrlInput onSubmit={handleRecipeExtraction} isLoading={extractRecipeMutation.isPending} />
         </div>
