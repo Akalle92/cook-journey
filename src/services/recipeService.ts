@@ -1,3 +1,4 @@
+
 import { Recipe } from '@/components/RecipeCard';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -80,6 +81,7 @@ export const extractRecipeFromUrl = async (url: string): Promise<Recipe> => {
     }
     
     if (!data || data.status === 'error') {
+      console.error('Extraction failed:', data);
       throw new Error(data?.message || 'Failed to extract recipe from URL');
     }
     

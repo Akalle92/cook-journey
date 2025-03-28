@@ -32,7 +32,15 @@ serve(async (req) => {
     );
     
     // Parse request body
-    const { url, userId } = await req.json();
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      console.error("Error parsing request:", error);
+      throw new Error("Invalid request format");
+    }
+    
+    const { url, userId } = requestData;
     
     if (!url) {
       throw new Error("URL is required");
@@ -95,7 +103,7 @@ serve(async (req) => {
     };
     
     try {
-      // Save recipe to database
+      // Using service role key to bypass RLS
       const { data, error } = await supabaseClient
         .from('recipes')
         .insert([recipe])
@@ -104,7 +112,20 @@ serve(async (req) => {
       
       if (error) {
         console.error("Error saving recipe:", error);
-        throw new Error("Failed to save recipe");
+        return new Response(
+          JSON.stringify({
+            status: "error",
+            message: `Failed to save recipe: ${error.message}`,
+            details: error.details
+          }),
+          {
+            status: 400,
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders
+            },
+          }
+        );
       }
       
       // Return the saved recipe
@@ -124,10 +145,23 @@ serve(async (req) => {
       );
     } catch (error) {
       console.error("Error saving recipe:", error);
-      throw new Error("Failed to save recipe");
+      return new Response(
+        JSON.stringify({
+          status: "error",
+          message: `Failed to save recipe: ${error.message}`,
+        }),
+        {
+          status: 400,
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+        }
+      );
     }
   } catch (error) {
     // Return error response
+    console.error("Error processing URL:", error);
     return new Response(
       JSON.stringify({
         status: "error",

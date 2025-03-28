@@ -46,7 +46,7 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) 
             <X className="h-5 w-5" />
           </Button>
           <Badge className="absolute top-3 left-3 z-20 bg-teal text-charcoal font-mono">
-            {recipe.category}
+            {recipe.category || 'Uncategorized'}
           </Badge>
         </div>
         
@@ -64,7 +64,7 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) 
             
             <div className="flex items-center gap-1.5">
               <Utensils className="h-4 w-4 text-purple" />
-              <span>{recipe.ingredients.length} ingredients</span>
+              <span>{recipe.ingredients?.length || 0} ingredients</span>
             </div>
             
             <div className="flex items-center gap-1.5">
@@ -94,41 +94,49 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) 
         <div className="flex-1 overflow-auto px-6 py-4">
           {activeTab === 'ingredients' ? (
             <ul className="space-y-3 font-mono">
-              {recipe.ingredients && recipe.ingredients.map((ingredient, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 mt-2 bg-coral rounded-full"></div>
-                  <span>{ingredient}</span>
-                </li>
-              ))}
+              {recipe.ingredients && recipe.ingredients.length > 0 ? (
+                recipe.ingredients.map((ingredient, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 mt-2 bg-coral rounded-full"></div>
+                    <span>{ingredient}</span>
+                  </li>
+                ))
+              ) : (
+                <li className="text-muted-foreground">No ingredients found</li>
+              )}
             </ul>
           ) : (
             <ol className="space-y-6">
-              {recipe.instructions && recipe.instructions.map((instruction, index) => (
-                <li key={index} className="flex gap-3">
-                  <div className="flex-shrink-0 bg-muted w-8 h-8 font-mono text-teal flex items-center justify-center">
-                    {index + 1}
-                  </div>
-                  <div>
-                    <p>{instruction}</p>
-                    {instruction.toLowerCase().includes('minute') && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-2 text-xs text-teal border-teal/30 hover:bg-teal/10 flex items-center gap-1.5"
-                        onClick={() => {
-                          toast({
-                            title: "Timer",
-                            description: "Timer feature will be available in the next update!",
-                            variant: "default",
-                          });
-                        }}
-                      >
-                        <Timer className="h-3 w-3" /> Set Timer
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              ))}
+              {recipe.instructions && recipe.instructions.length > 0 ? (
+                recipe.instructions.map((instruction, index) => (
+                  <li key={index} className="flex gap-3">
+                    <div className="flex-shrink-0 bg-muted w-8 h-8 font-mono text-teal flex items-center justify-center">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p>{instruction}</p>
+                      {instruction.toLowerCase().includes('minute') && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2 text-xs text-teal border-teal/30 hover:bg-teal/10 flex items-center gap-1.5"
+                          onClick={() => {
+                            toast({
+                              title: "Timer",
+                              description: "Timer feature will be available in the next update!",
+                              variant: "default",
+                            });
+                          }}
+                        >
+                          <Timer className="h-3 w-3" /> Set Timer
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                ))
+              ) : (
+                <li className="text-muted-foreground">No instructions found</li>
+              )}
             </ol>
           )}
         </div>
