@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Header from '@/components/Header';
@@ -24,13 +23,15 @@ const Index = () => {
     queryFn: fetchRecipes,
     staleTime: 60000, // 1 minute
     retry: 3,
-    onError: (error: any) => {
-      console.error('Failed to load recipes:', error);
-      toast({
-        title: "Error Loading Recipes",
-        description: "There was a problem loading your recipes. Please try again later.",
-        variant: "destructive",
-      });
+    meta: {
+      onError: (error: any) => {
+        console.error('Failed to load recipes:', error);
+        toast({
+          title: "Error Loading Recipes",
+          description: "There was a problem loading your recipes. Please try again later.",
+          variant: "destructive",
+        });
+      }
     }
   });
   
