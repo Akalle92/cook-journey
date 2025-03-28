@@ -6,8 +6,7 @@ import Header from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import { ChefHat, Calendar, Clock, Utensils, TrendingUp, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import AuthModal from '@/components/Auth/AuthModal';
 import { Link } from 'react-router-dom';
 import CookingActivityList from '@/components/Dashboard/CookingActivityList';
@@ -19,7 +18,7 @@ import { useDashboardStats } from '@/hooks/useDashboardStats';
 const Dashboard = () => {
   const { user } = useAuth();
   const { profile, isLoading: isProfileLoading } = useProfile();
-  const { stats, isLoading: isStatsLoading } = useDashboardStats();
+  const { data: stats, isLoading: isStatsLoading } = useDashboardStats();
   const [showAuthModal, setShowAuthModal] = React.useState(false);
   
   React.useEffect(() => {
@@ -76,7 +75,7 @@ const Dashboard = () => {
           </div>
         )}
         
-        {!isLoading && user && (
+        {!isLoading && user && stats && (
           <>
             <CookingStatCards stats={stats} />
             
