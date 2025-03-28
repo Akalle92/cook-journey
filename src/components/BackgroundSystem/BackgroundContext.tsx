@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ThemeType } from './presets/BackgroundPresets';
+import { ThemeType } from './BackgroundTypes';
 
 type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
 type CuisineType = 'italian' | 'japanese' | 'mexican' | 'nordic' | 'default';

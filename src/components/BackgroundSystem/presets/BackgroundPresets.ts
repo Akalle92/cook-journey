@@ -1,9 +1,5 @@
-
-import { TimeOfDay, CuisineType, Mood, TimeGradient, CuisineTexture, MoodSettings } from '../BackgroundTypes';
+import { TimeOfDay, CuisineType, Mood, TimeGradient, CuisineTexture, MoodSettings, ThemeType } from '../BackgroundTypes';
 import { ParticleType } from '../particles/ParticleTypes';
-
-// Theme represents a complete background configuration
-export type ThemeType = 'mystical' | 'futuristic' | 'natural' | 'elegant' | 'minimalist' | 'vibrant' | 'cozy' | 'default';
 
 export interface BackgroundTheme {
   name: ThemeType;

@@ -1,3 +1,4 @@
+
 import { ParticleType } from './particles/ParticleTypes';
 export type ThemeType = 'mystical' | 'futuristic' | 'natural' | 'elegant' | 'minimalist' | 'vibrant' | 'cozy' | 'default';
 
@@ -6,8 +7,7 @@ export type CuisineType = 'italian' | 'japanese' | 'mexican' | 'nordic' | 'defau
 export type CuisinePattern = 'terracotta' | 'paper' | 'geometric' | 'woodgrain' | 'default';
 export type Mood = 'peaceful' | 'energetic' | 'cozy' | 'elegant' | 'default';
 
-// Re-export ThemeType for public use
-export type { ThemeType };
+// ThemeType is already exported above, so no need to re-export it
 
 export interface TimeGradient {
   colors: string[];
