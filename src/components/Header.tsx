@@ -1,80 +1,162 @@
 
 import React, { useState } from 'react';
-import { BookOpen, LogIn, LogOut, User, Settings } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, User, LogOut, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import AuthModal from './Auth/AuthModal';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem,
+
+  DropdownMenuSeparator,
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
+import AuthModal from '@/components/Auth/AuthModal';
 import { useToast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
-import AvatarUpload from './Profile/AvatarUpload';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const Header = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { user, signOut } = useAuth();
+  const { profile } = useProfile();
   const { toast } = useToast();
+  const location = useLocation();
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
 
   const handleSignOut = async () => {
     try {
       await signOut();
       toast({
-        title: 'Signed out',
-        description: 'You have been successfully signed out.',
+        title: 'Signed out successfully',
+        description: 'You have been signed out of your account',
       });
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || 'An error occurred during sign out.',
+        title: 'Error signing out',
+        description: error.message,
         variant: 'destructive',
       });
     }
   };
 
+  const getInitials = () => {
+    if (!user) return 'G';
+    return (user.email?.charAt(0) || 'U').toUpperCase();
+  };
+
   return (
-    <header className="bg-charcoal/80 backdrop-blur-sm py-4 border-b border-offwhite/10">
-      <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center">
-          <BookOpen className="text-teal mr-2 h-6 w-6" />
-          <span className="font-serif font-bold text-xl">RecipeKeeper Pro</span>
-        </Link>
+    <header className="border-b border-border backdrop-blur-md bg-background/75 sticky top-0 z-40">
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <Link to="/" className="font-serif text-2xl font-bold">
+            RecipeKeeper
+          </Link>
+          
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-6">
+            <Link 
+              to="/" 
+              className={`text-sm ${location.pathname === '/' ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Recipes
+            </Link>
+            {user && (
+              <Link 
+                to="/dashboard" 
+                className={`text-sm ${location.pathname === '/dashboard' ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Dashboard
+              </Link>
+            )}
+          </nav>
+        </div>
         
-        <div>
+        <div className="flex items-center gap-2">
           {user ? (
-            <div className="flex items-center gap-3">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="rounded-full p-0 w-10 h-10">
-                    <AvatarUpload size="sm" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="cursor-pointer flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="cursor-pointer flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Preferences</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sign Out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar_url || ''} alt={user.email || ''} />
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard" className="cursor-pointer flex items-center">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="cursor-pointer flex items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <Button variant="ghost" size="sm" onClick={() => setShowAuthModal(true)}>
-              <LogIn className="h-4 w-4 mr-1" />
+            <Button variant="ghost" onClick={() => setShowAuthModal(true)}>
               Sign In
             </Button>
           )}
+          
+          {/* Mobile menu button */}
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleMenu}>
+            {isMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
+          </Button>
         </div>
       </div>
+      
+      {/* Mobile Navigation */}
+      {isMenuOpen && (
+        <div className="md:hidden p-4 pt-0 pb-4 border-t border-border">
+          <nav className="flex flex-col space-y-4">
+            <Link 
+              to="/" 
+              className={`text-sm ${location.pathname === '/' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Recipes
+            </Link>
+            {user && (
+              <Link 
+                to="/dashboard" 
+                className={`text-sm ${location.pathname === '/dashboard' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Dashboard
+              </Link>
+            )}
+            {user && (
+              <Link 
+                to="/profile" 
+                className={`text-sm ${location.pathname === '/profile' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Profile
+              </Link>
+            )}
+          </nav>
+        </div>
+      )}
       
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </header>
