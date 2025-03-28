@@ -36,16 +36,75 @@ const mapToRecipe = (item: any): Recipe => {
     instructions = [];
   }
 
+  // Log the parsed instructions to debug
+  console.log('Parsed instructions for recipe:', item.title, instructions);
+
   return {
     id: item.id,
     title: item.title || 'Untitled Recipe',
-    image: item.image_url || 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80&w=1000&auto=format&fit=crop',
-    category: item.category || 'Uncategorized',
+    image: extractFirstImageUrl(item.image_url) || 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80&w=1000&auto=format&fit=crop',
+    category: extractFirstValue(item.category) || 'Uncategorized',
     prepTime: item.prep_time ? `${item.prep_time} min` : 'N/A',
     difficulty: determineDifficulty(item.prep_time, item.cook_time),
     ingredients: ingredients,
     instructions: instructions
   };
+};
+
+// Helper function to extract the first image URL from a possible JSON array
+const extractFirstImageUrl = (imageUrl: any): string | undefined => {
+  if (!imageUrl) return undefined;
+  
+  try {
+    // If it's already a string, return it
+    if (typeof imageUrl === 'string') return imageUrl;
+    
+    // If it's a JSON string, parse it
+    if (typeof imageUrl === 'string' && (imageUrl.startsWith('[') || imageUrl.startsWith('{'))) {
+      const parsed = JSON.parse(imageUrl);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed[0];
+      }
+      return parsed.url || parsed.src || undefined;
+    }
+    
+    // If it's already an array, return the first item
+    if (Array.isArray(imageUrl) && imageUrl.length > 0) {
+      return imageUrl[0];
+    }
+  } catch (error) {
+    console.error('Error parsing image URL:', error);
+  }
+  
+  return undefined;
+};
+
+// Helper function to extract the first value from a possible JSON array or string
+const extractFirstValue = (value: any): string | undefined => {
+  if (!value) return undefined;
+  
+  try {
+    // If it's already a string, return it
+    if (typeof value === 'string') {
+      if (value.startsWith('[') || value.startsWith('{')) {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed[0];
+        }
+        return parsed.toString();
+      }
+      return value;
+    }
+    
+    // If it's already an array, return the first item
+    if (Array.isArray(value) && value.length > 0) {
+      return value[0];
+    }
+  } catch (error) {
+    console.error('Error parsing value:', error);
+  }
+  
+  return String(value);
 };
 
 // Helper function to determine difficulty based on prep and cook time
@@ -253,4 +312,3 @@ const mockRecipes: Recipe[] = [
     ]
   }
 ];
-

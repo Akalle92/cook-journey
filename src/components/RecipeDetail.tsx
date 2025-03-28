@@ -34,6 +34,8 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) 
   
   if (!recipe) return null;
   
+  console.log('Recipe detail component - instructions:', recipe.instructions);
+  
   const startCooking = () => {
     toast({
       title: "Cooking Mode",
@@ -173,7 +175,7 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) 
                       </div>
                       <div>
                         <p>{instruction}</p>
-                        {instruction.toLowerCase().includes('minute') && (
+                        {typeof instruction === 'string' && instruction.toLowerCase().includes('minute') && (
                           <Button 
                             variant="outline" 
                             size="sm" 
