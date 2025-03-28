@@ -26,12 +26,17 @@ const CookingStatCards: React.FC<CookingStatCardsProps> = ({ stats }) => {
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <GlassCard className={`transform transition-all duration-700 ${isAnimating ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'}`} style={{ transitionDelay: '100ms' }}>
+      <GlassCard 
+        className={`transform transition-all duration-700 ${isAnimating ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'}`} 
+        style={{ transitionDelay: '100ms' }}
+        intensity="medium"
+        accentPosition="top"
+      >
         <div className="relative overflow-hidden rounded-lg">
           <TextureOverlay type="fine" blend="soft-light" opacity={0.07} />
           <GlassCardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <ChefHat className="text-teal h-5 w-5" />
+              <ChefHat className="text-teal h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
               <GlassCardTitle className="text-sm font-mono uppercase">Recipes Cooked</GlassCardTitle>
             </div>
           </GlassCardHeader>
@@ -42,12 +47,17 @@ const CookingStatCards: React.FC<CookingStatCardsProps> = ({ stats }) => {
         </div>
       </GlassCard>
       
-      <GlassCard className={`transform transition-all duration-700 ${isAnimating ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'}`} style={{ transitionDelay: '200ms' }}>
+      <GlassCard 
+        className={`transform transition-all duration-700 ${isAnimating ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'}`} 
+        style={{ transitionDelay: '200ms' }}
+        intensity="medium"
+        accentPosition="right"
+      >
         <div className="relative overflow-hidden rounded-lg">
           <TextureOverlay type="medium" blend="soft-light" opacity={0.05} />
           <GlassCardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <Calendar className="text-coral h-5 w-5" />
+              <Calendar className="text-coral h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
               <GlassCardTitle className="text-sm font-mono uppercase">This Month</GlassCardTitle>
             </div>
           </GlassCardHeader>
@@ -58,12 +68,17 @@ const CookingStatCards: React.FC<CookingStatCardsProps> = ({ stats }) => {
         </div>
       </GlassCard>
       
-      <GlassCard className={`transform transition-all duration-700 ${isAnimating ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'}`} style={{ transitionDelay: '300ms' }}>
+      <GlassCard 
+        className={`transform transition-all duration-700 ${isAnimating ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'}`} 
+        style={{ transitionDelay: '300ms' }}
+        intensity="medium"
+        accentPosition="left"
+      >
         <div className="relative overflow-hidden rounded-lg">
           <TextureOverlay type="coarse" blend="soft-light" opacity={0.05} />
           <GlassCardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <Clock className="text-purple h-5 w-5" />
+              <Clock className="text-purple h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
               <GlassCardTitle className="text-sm font-mono uppercase">Avg. Cooking Time</GlassCardTitle>
             </div>
           </GlassCardHeader>
@@ -74,12 +89,17 @@ const CookingStatCards: React.FC<CookingStatCardsProps> = ({ stats }) => {
         </div>
       </GlassCard>
       
-      <GlassCard className={`transform transition-all duration-700 ${isAnimating ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'}`} style={{ transitionDelay: '400ms' }}>
+      <GlassCard 
+        className={`transform transition-all duration-700 ${isAnimating ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'}`} 
+        style={{ transitionDelay: '400ms' }}
+        intensity="medium"
+        accentPosition="bottom"
+      >
         <div className="relative overflow-hidden rounded-lg">
           <TextureOverlay type="paper" blend="soft-light" opacity={0.05} />
           <GlassCardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <Utensils className="text-amber-400 h-5 w-5" />
+              <Utensils className="text-amber-400 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
               <GlassCardTitle className="text-sm font-mono uppercase">Top Category</GlassCardTitle>
             </div>
           </GlassCardHeader>
