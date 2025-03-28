@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { useBackground } from './BackgroundContext';
 
 interface TextureOverlayProps {
-  type?: 'fine' | 'medium' | 'coarse' | 'paper' | 'fabric' | 'brushstroke' | 'food';
+  type?: 'fine' | 'medium' | 'coarse' | 'paper' | 'fabric' | 'brushstroke' | 'food' | 'marble' | 'wood' | 'ceramic';
   blend?: 'overlay' | 'soft-light' | 'multiply' | 'screen';
   opacity?: number;
   className?: string;
@@ -17,7 +16,7 @@ export const TextureOverlay: React.FC<TextureOverlayProps> = ({
 }) => {
   const { timeOfDay } = useBackground();
   
-  // Adjust opacity based on time of day
+  // Adjust opacity based on time of day with more nuanced transitions
   const timeBasedOpacity = {
     morning: opacity,
     afternoon: opacity * 0.8,
@@ -25,7 +24,7 @@ export const TextureOverlay: React.FC<TextureOverlayProps> = ({
     night: opacity * 1.5,
   };
   
-  // Define SVG patterns for different texture types
+  // Expanded texture patterns with new types
   const texturePatterns = {
     fine: (
       <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 40 40">
@@ -105,6 +104,33 @@ export const TextureOverlay: React.FC<TextureOverlayProps> = ({
         <rect width="100%" height="100%" fill="url(#lines)" />
       </svg>
     ),
+    marble: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100">
+        <filter id="marble-texture">
+          <feTurbulence type="fractalNoise" baseFrequency="0.1" numOctaves="5" seed="2" />
+          <feDisplacementMap in="SourceGraphic" scale="10" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#marble-texture)" />
+      </svg>
+    ),
+    wood: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100">
+        <filter id="wood-texture">
+          <feTurbulence type="turbulence" baseFrequency="0.05 0.2" numOctaves="2" seed="3" />
+          <feDisplacementMap in="SourceGraphic" scale="8" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#wood-texture)" />
+      </svg>
+    ),
+    ceramic: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100">
+        <filter id="ceramic-texture">
+          <feTurbulence type="fractalNoise" baseFrequency="0.2" numOctaves="3" seed="4" />
+          <feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.3 0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#ceramic-texture)" />
+      </svg>
+    ),
   };
   
   // Map blend mode to CSS class
@@ -118,7 +144,10 @@ export const TextureOverlay: React.FC<TextureOverlayProps> = ({
   return (
     <div
       className={`absolute inset-0 pointer-events-none ${blendModeClass[blend]} ${className || ''}`}
-      style={{ opacity: timeBasedOpacity[timeOfDay] }}
+      style={{ 
+        opacity: timeBasedOpacity[timeOfDay],
+        transition: 'opacity 0.5s ease-in-out' 
+      }}
     >
       {texturePatterns[type]}
     </div>
