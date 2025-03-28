@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Instagram, ArrowRight, Lock } from 'lucide-react';
+import { Instagram, ArrowRight, Lock, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,12 @@ const InstagramUrlInput: React.FC<InstagramUrlInputProps> = ({ onSubmit, isLoadi
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Check if URL is a valid Instagram URL
+  const isValidInstagramUrl = (url: string): boolean => {
+    const instagramUrlPattern = /instagram\.com\/(p|reel|stories)\/[^\/\s]+/i;
+    return instagramUrlPattern.test(url);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,16 +46,32 @@ const InstagramUrlInput: React.FC<InstagramUrlInputProps> = ({ onSubmit, isLoadi
       return;
     }
     
-    if (!url.includes('instagram.com')) {
+    if (!isValidInstagramUrl(url)) {
       toast({
         title: "Invalid URL",
-        description: "Please enter a valid Instagram URL",
+        description: "Please enter a valid Instagram URL (post, reel, or story)",
         variant: "destructive",
       });
       return;
     }
     
     onSubmit(url);
+  };
+
+  const handlePaste = async () => {
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      if (clipboardText && clipboardText.includes('instagram.com')) {
+        setUrl(clipboardText);
+        toast({
+          title: "URL Pasted",
+          description: "Instagram URL detected and pasted",
+        });
+      }
+    } catch (err) {
+      // Handle clipboard permission issues silently
+      console.log("Clipboard access denied");
+    }
   };
 
   return (
@@ -72,6 +94,15 @@ const InstagramUrlInput: React.FC<InstagramUrlInputProps> = ({ onSubmit, isLoadi
                   onChange={(e) => setUrl(e.target.value)}
                   className="pl-10 pr-4 py-6 bg-charcoal border-muted font-mono text-sm"
                 />
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={handlePaste}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-offwhite"
+                >
+                  <Link2 className="h-4 w-4" />
+                </Button>
               </div>
               
               <Button 

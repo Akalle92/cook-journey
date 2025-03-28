@@ -50,30 +50,134 @@ export const fetchRecipes = async (): Promise<Recipe[]> => {
   }
 };
 
+// Parse Instagram URL to extract post ID
+const extractInstagramPostId = (url: string): string | null => {
+  // Handle various Instagram URL formats
+  const patterns = [
+    /instagram.com\/p\/([^\/\?]+)/i,      // Regular post: instagram.com/p/ABC123
+    /instagram.com\/reel\/([^\/\?]+)/i,   // Reels: instagram.com/reel/ABC123
+    /instagram.com\/stories\/[^\/]+\/([^\/\?]+)/i  // Stories: instagram.com/stories/username/ABC123
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  return null;
+};
+
+// Generate a recipe title from the instagram post content
+const generateRecipeTitle = (content: string): string => {
+  // First try to extract a title from common patterns
+  const titlePatterns = [
+    /recipe for ([^\.]+)/i,
+    /how to make ([^\.]+)/i,
+    /homemade ([^\.]+)/i,
+    /([^\.]{3,40}) recipe/i,
+  ];
+  
+  for (const pattern of titlePatterns) {
+    const match = content.match(pattern);
+    if (match && match[1]) {
+      // Capitalize first letter of each word
+      return match[1].split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    }
+  }
+  
+  // If no title found, use the first 5-8 words
+  const words = content.split(' ');
+  const titleWords = words.slice(0, Math.min(words.length, 6));
+  return titleWords.join(' ') + (titleWords.length < words.length ? '...' : '');
+};
+
 // Extract recipe from Instagram URL and save to Supabase
 export const extractRecipeFromInstagram = async (url: string): Promise<Recipe> => {
   console.log(`Extracting recipe from URL: ${url}`);
   
-  // This is still a mock function - in a real app, this would call an API
-  // We'll simulate parsing Instagram content and saving to Supabase
   try {
-    // Generate a mock recipe based on the URL
-    const newRecipe = generateMockRecipe(url);
+    // Extract the Instagram post ID
+    const postId = extractInstagramPostId(url);
+    if (!postId) {
+      throw new Error('Invalid Instagram URL. Please provide a valid Instagram post URL.');
+    }
+    
+    // In a real app, we would call an API to fetch the Instagram post data
+    // For now, we'll simulate that by generating a recipe based on the post ID
+    const mockInstagramData = {
+      caption: `Delicious Avocado Toast recipe for breakfast! Perfect for a quick, healthy start to your day.\n\nIngredients:\n- 2 ripe avocados\n- 4 slices sourdough bread\n- 2 eggs\n- Fresh lime juice\n- Red pepper flakes\n- Salt and pepper to taste\n- Olive oil\n\nInstructions:\n1. Toast the sourdough bread until golden and crispy.\n2. Mash the avocados in a bowl with lime juice, salt and pepper.\n3. Spread the avocado mixture on the toast.\n4. Heat olive oil in a pan and fry the eggs sunny side up for about 3 minutes.\n5. Place the fried eggs on top of the avocado toast.\n6. Sprinkle with red pepper flakes and serve immediately.\n\n#avocadotoast #breakfast #healthyfood #quickmeals`,
+      image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?q=80&w=1000&auto=format&fit=crop'
+    };
+    
+    // Parse ingredients and instructions from the caption
+    const ingredients: string[] = [];
+    const instructions: string[] = [];
+    
+    // Extract ingredients
+    const ingredientsMatch = mockInstagramData.caption.match(/ingredients:(.+?)instructions:/is);
+    if (ingredientsMatch && ingredientsMatch[1]) {
+      const ingredientsText = ingredientsMatch[1].trim();
+      ingredientsText.split('\n').forEach(line => {
+        const ingredient = line.replace(/^-\s*/, '').trim();
+        if (ingredient) ingredients.push(ingredient);
+      });
+    }
+    
+    // Extract instructions
+    const instructionsMatch = mockInstagramData.caption.match(/instructions:(.+?)(?:#|$)/is);
+    if (instructionsMatch && instructionsMatch[1]) {
+      const instructionsText = instructionsMatch[1].trim();
+      instructionsText.split('\n').forEach(line => {
+        const instruction = line.replace(/^\d+\.\s*/, '').trim();
+        if (instruction) instructions.push(instruction);
+      });
+    }
+    
+    // Generate a title from the caption
+    const title = generateRecipeTitle(mockInstagramData.caption);
+    
+    // Determine a category
+    let category = 'Other';
+    const categoryKeywords = {
+      'Breakfast': ['breakfast', 'morning', 'brunch', 'toast', 'eggs', 'pancake', 'waffle'],
+      'Lunch': ['lunch', 'sandwich', 'salad', 'wrap'],
+      'Dinner': ['dinner', 'supper', 'roast', 'steak', 'pasta'],
+      'Dessert': ['dessert', 'cake', 'pie', 'cookie', 'sweet', 'chocolate', 'ice cream'],
+      'Appetizer': ['appetizer', 'starter', 'snack', 'dip', 'finger food'],
+      'Drink': ['drink', 'cocktail', 'smoothie', 'juice', 'beverage']
+    };
+    
+    for (const [cat, keywords] of Object.entries(categoryKeywords)) {
+      if (keywords.some(keyword => mockInstagramData.caption.toLowerCase().includes(keyword))) {
+        category = cat;
+        break;
+      }
+    }
+    
+    // Estimate prep time (for demonstration purposes)
+    const prepTime = Math.max(5, Math.min(30, instructions.length * 5));
+    
+    // Create a new recipe object
+    const newRecipe = {
+      title,
+      description: mockInstagramData.caption.split('\n')[0],
+      image_url: mockInstagramData.image,
+      category,
+      prep_time: prepTime,
+      ingredients,
+      instructions,
+      source_url: url,
+      tags: mockInstagramData.caption.match(/#\w+/g)?.map(tag => tag.slice(1)) || []
+    };
     
     // Save the recipe to Supabase
     const { data, error } = await supabase
       .from('recipes')
-      .insert({
-        title: newRecipe.title,
-        description: 'Extracted from Instagram',
-        image_url: newRecipe.image,
-        category: newRecipe.category,
-        prep_time: parseInt(newRecipe.prepTime),
-        ingredients: newRecipe.ingredients,
-        instructions: newRecipe.instructions,
-        source_url: url,
-        tags: ['instagram', 'extracted']
-      })
+      .insert(newRecipe)
       .select()
       .single();
     
@@ -83,40 +187,10 @@ export const extractRecipeFromInstagram = async (url: string): Promise<Recipe> =
     }
     
     return mapToRecipe(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in extractRecipeFromInstagram:', error);
-    // Fall back to returning a mock recipe if there's an error
-    return generateMockRecipe(url);
+    throw new Error(error.message || 'Failed to extract recipe from Instagram. Please try again.');
   }
-};
-
-// Helper function to generate a mock recipe for demonstration
-const generateMockRecipe = (url: string): Recipe => {
-  return {
-    id: `ig-${Date.now()}`,
-    title: 'Instagram Extracted Recipe',
-    image: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?q=80&w=1000&auto=format&fit=crop',
-    category: 'Breakfast',
-    prepTime: '25 min',
-    difficulty: 'Easy',
-    ingredients: [
-      '2 ripe avocados',
-      '4 slices sourdough bread',
-      '2 eggs',
-      'Fresh lime juice',
-      'Red pepper flakes',
-      'Salt and pepper to taste',
-      'Olive oil'
-    ],
-    instructions: [
-      'Toast the sourdough bread until golden and crispy.',
-      'Mash the avocados in a bowl with lime juice, salt and pepper.',
-      'Spread the avocado mixture on the toast.',
-      'Heat olive oil in a pan and fry the eggs sunny side up for about 3 minutes.',
-      'Place the fried eggs on top of the avocado toast.',
-      'Sprinkle with red pepper flakes and serve immediately.'
-    ]
-  };
 };
 
 // Mock data for recipes (fallback if database is empty)
@@ -214,3 +288,4 @@ const mockRecipes: Recipe[] = [
     ]
   }
 ];
+

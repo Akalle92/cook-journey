@@ -40,7 +40,7 @@ const Index = () => {
       
       toast({
         title: "Recipe Extracted",
-        description: "Your recipe has been successfully extracted!",
+        description: "Your recipe has been successfully extracted from Instagram!",
         variant: "default",
       });
     },
@@ -64,7 +64,17 @@ const Index = () => {
       return;
     }
     
-    extractRecipeMutation.mutate(url);
+    // Clean the URL a bit before sending
+    let cleanUrl = url.trim();
+    // Remove any URL parameters
+    cleanUrl = cleanUrl.split('?')[0];
+    
+    toast({
+      title: "Extracting Recipe",
+      description: "Processing the Instagram post...",
+    });
+    
+    extractRecipeMutation.mutate(cleanUrl);
   };
   
   const handleRecipeClick = (recipe: Recipe) => {
@@ -94,12 +104,22 @@ const Index = () => {
           </div>
         ) : (
           <>
-            <TrendingRecipes recipes={recipes.slice(0, 5)} onRecipeClick={handleRecipeClick} />
-            
-            <div className="mb-8">
-              <h2 className="font-mono text-xl uppercase tracking-tight mb-4">Your Recipes</h2>
-              <RecipeGrid recipes={recipes} onRecipeClick={handleRecipeClick} />
-            </div>
+            {recipes.length > 0 ? (
+              <>
+                <TrendingRecipes recipes={recipes.slice(0, 5)} onRecipeClick={handleRecipeClick} />
+                
+                <div className="mb-8">
+                  <h2 className="font-mono text-xl uppercase tracking-tight mb-4">Your Recipes</h2>
+                  <RecipeGrid recipes={recipes} onRecipeClick={handleRecipeClick} />
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground mb-4">
+                  No recipes found. Extract your first recipe from Instagram!
+                </p>
+              </div>
+            )}
           </>
         )}
       </main>
