@@ -2,10 +2,9 @@
 import { useRef } from 'react';
 import { TimeOfDay, CuisineType, Mood, timeGradients, cuisineTextures, moodSettings } from '../BackgroundTypes';
 import { updateParticlesWithMouse, renderParticlesByType } from '../particles/ParticleSystem';
-import { createGradient, createMouseHighlight } from '../utils/CanvasUtils';
+import { createGradient } from '../utils/CanvasUtils';
 import { drawPatternByCuisine } from '../patterns/BackgroundPatterns';
 import { useCanvasSize } from './useCanvasSize';
-import { useMouseTracking } from './useMouseTracking';
 import { useWindowFocus } from './useWindowFocus';
 import { useReducedMotion } from './useReducedMotion';
 import { useParticleSystem } from './useParticleSystem';
@@ -24,7 +23,6 @@ export const useBackgroundCanvas = ({
   mood 
 }: UseBackgroundCanvasProps) => {
   const { canvasRef, updateCanvasSize } = useCanvasSize();
-  const { mousePosition, isMouseMoving } = useMouseTracking();
   const isWindowFocused = useWindowFocus();
   const isReducedMotion = useReducedMotion();
   const { noiseImageDataRef, generateNoiseTexture } = useNoiseTexture();
@@ -91,15 +89,10 @@ export const useBackgroundCanvas = ({
       ctx.putImageData(noiseImageDataRef.current, 0, 0);
     }
     
-    // Update and draw particles in batches
-    particleSystemRef.current = updateParticlesWithMouse(
-      particleSystemRef.current,
-      width,
-      height,
-      mousePosition,
-      isMouseMoving,
-      currentMood
-    );
+    // Update particles without mouse interaction
+    particleSystemRef.current.forEach(particle => {
+      particle.update(width, height);
+    });
     
     // Render particles grouped by type for better performance
     renderParticlesByType(ctx, particleSystemRef.current);
@@ -110,15 +103,6 @@ export const useBackgroundCanvas = ({
       
       // Draw pattern based on cuisine type
       drawPatternByCuisine(ctx, width, height, currentCuisine.pattern);
-    }
-    
-    // Add interactive highlight if mouse is moving
-    if (mousePosition && isMouseMoving) {
-      const gradientRadius = 150;
-      ctx.fillStyle = createMouseHighlight(ctx, mousePosition.x, mousePosition.y, gradientRadius);
-      ctx.beginPath();
-      ctx.arc(mousePosition.x, mousePosition.y, gradientRadius, 0, Math.PI * 2);
-      ctx.fill();
     }
   };
   
@@ -131,3 +115,4 @@ export const useBackgroundCanvas = ({
   
   return canvasRef;
 };
+
