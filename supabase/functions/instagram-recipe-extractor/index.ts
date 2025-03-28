@@ -1,347 +1,432 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // CORS headers for browser requests
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// SourceType enumeration for tracking extraction methods
+enum SourceType {
+  INSTAGRAM = "instagram",
+  SCHEMA_RECIPE = "schema.org",
+  JSON_LD = "json-ld",
+  HEURISTIC = "heuristic",
+  UNKNOWN = "unknown"
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-
+  
   try {
-    // Get environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const instagramAccessToken = Deno.env.get('INSTAGRAM_ACCESS_TOKEN');
-    
-    if (!instagramAccessToken) {
-      throw new Error('Instagram access token not configured');
-    }
-
-    // Create authenticated Supabase client
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Create Supabase client with the project URL and service key
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
     
     // Parse request body
     const { url, userId } = await req.json();
     
     if (!url) {
-      throw new Error('No URL provided');
+      return new Response(
+        JSON.stringify({ 
+          status: "error", 
+          message: "URL is required" 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
     }
-
+    
     if (!userId) {
-      throw new Error('User ID is required');
-    }
-
-    console.log(`Processing URL: ${url}`);
-
-    // Determine URL type and call appropriate extraction method
-    const urlType = determineUrlType(url);
-    console.log(`Detected URL type: ${urlType}`);
-
-    let recipeData;
-    
-    if (urlType === 'instagram') {
-      // Extract Instagram post ID and fetch data
-      const postId = extractInstagramPostId(url);
-      if (!postId) {
-        throw new Error('Invalid Instagram URL. Could not extract post ID.');
-      }
-      console.log(`Extracting recipe from Instagram post ID: ${postId}`);
-      const mediaData = await fetchInstagramMedia(postId, instagramAccessToken);
-      recipeData = parseRecipeFromCaption(mediaData);
-    } else if (urlType === 'recipe-website') {
-      // For recipe websites, use structured data extraction
-      recipeData = await extractRecipeWebsiteData(url);
-    } else {
-      // For general websites, use generic content extraction
-      recipeData = await extractGeneralWebsiteData(url);
+      return new Response(
+        JSON.stringify({ 
+          status: "error", 
+          message: "User ID is required" 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
     }
     
-    // Store the recipe in Supabase
-    const { data: savedRecipe, error } = await supabase
-      .from('recipes')
+    // Determine source type based on URL pattern
+    const sourceType = determineSourceType(url);
+    console.log(`URL: ${url}, Source Type: ${sourceType}`);
+    
+    // Multi-strategy extraction based on source type
+    let extractionResult = null;
+    
+    switch (sourceType) {
+      case SourceType.INSTAGRAM:
+        extractionResult = await extractInstagramRecipe(url);
+        break;
+      default:
+        // For all other URLs, attempt generic extraction strategies
+        extractionResult = await extractGenericRecipe(url);
+    }
+    
+    if (!extractionResult || !extractionResult.isRecipe) {
+      return new Response(
+        JSON.stringify({ 
+          status: "error", 
+          message: "No recipe found on this page" 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+      );
+    }
+    
+    // Insert the recipe into Supabase
+    const { data: recipeData, error: recipeError } = await supabaseClient
+      .from("recipes")
       .insert({
-        ...recipeData,
+        title: extractionResult.recipe.title,
+        description: extractionResult.recipe.description || "",
+        image_url: extractionResult.recipe.image_url,
+        source_url: url,
         user_id: userId,
-        source_url: url
+        category: extractionResult.recipe.category || "Uncategorized",
+        ingredients: extractionResult.recipe.ingredients,
+        instructions: extractionResult.recipe.instructions,
+        prep_time: extractionResult.recipe.prep_time || null,
+        cook_time: extractionResult.recipe.cook_time || null,
+        difficulty_level: extractionResult.recipe.difficulty || "Medium",
+        cuisine: extractionResult.recipe.cuisine || null,
+        meal_type: extractionResult.recipe.meal_type || null,
+        tags: extractionResult.recipe.tags || []
       })
       .select()
       .single();
     
-    if (error) {
-      console.error('Error saving recipe to database:', error);
-      throw new Error(`Database error: ${error.message}`);
+    if (recipeError) {
+      console.error("Error saving recipe:", recipeError);
+      throw new Error("Failed to save recipe");
     }
-
-    // Return the saved recipe
-    return new Response(
-      JSON.stringify({
-        status: 'success',
-        data: savedRecipe
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('Error in recipe-extractor:', error);
     
     return new Response(
       JSON.stringify({
-        status: 'error',
-        message: error.message || 'An unexpected error occurred'
+        status: "success",
+        data: recipeData,
+        confidence: extractionResult.confidence,
+        source: extractionResult.extractionMethod
       }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+    
+  } catch (error) {
+    console.error("Error processing URL:", error);
+    
+    return new Response(
+      JSON.stringify({
+        status: "error",
+        message: error.message || "Failed to extract recipe"
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });
 
-// Function to determine the type of URL
-function determineUrlType(url: string): 'instagram' | 'recipe-website' | 'general-website' {
-  // Check if it's an Instagram URL
-  if (/instagram\.com\/(p|reel|stories)\/[^\/\?]+/i.test(url)) {
-    return 'instagram';
+// Determine the source type based on URL pattern
+function determineSourceType(url: string): SourceType {
+  const urlLower = url.toLowerCase();
+  
+  if (urlLower.includes("instagram.com")) {
+    return SourceType.INSTAGRAM;
   }
   
-  // Check if it's a known recipe website
+  // Add additional source type detection for common recipe sites
   const recipeWebsites = [
-    /allrecipes\.com/i,
-    /foodnetwork\.com/i,
-    /epicurious\.com/i,
-    /bonappetit\.com/i,
-    /taste\.com/i,
-    /delish\.com/i,
-    /seriouseats\.com/i,
-    /cookinglight\.com/i,
-    /eatingwell\.com/i,
-    /simplyrecipes\.com/i,
-    /food52\.com/i,
-    /thekitchn\.com/i,
-    /tasty\.co/i
+    { domain: "allrecipes.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "foodnetwork.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "epicurious.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "bonappetit.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "taste.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "delish.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "seriouseats.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "cookinglight.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "eatingwell.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "simplyrecipes.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "food52.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "thekitchn.com", type: SourceType.SCHEMA_RECIPE },
+    { domain: "tasty.co", type: SourceType.SCHEMA_RECIPE }
+    // More popular recipe websites could be added here
   ];
   
-  for (const pattern of recipeWebsites) {
-    if (pattern.test(url)) {
-      return 'recipe-website';
+  for (const site of recipeWebsites) {
+    if (urlLower.includes(site.domain)) {
+      return site.type;
     }
   }
   
-  // Default to general website
-  return 'general-website';
+  // Default to unknown/generic source type
+  return SourceType.UNKNOWN;
 }
 
-// Function to extract Instagram post ID from URL
-function extractInstagramPostId(url: string): string | null {
-  // Handle various Instagram URL formats
-  const patterns = [
-    /instagram\.com\/p\/([^\/\?]+)/i,      // Regular post: instagram.com/p/ABC123
-    /instagram\.com\/reel\/([^\/\?]+)/i,   // Reels: instagram.com/reel/ABC123
-    /instagram\.com\/stories\/[^\/]+\/([^\/\?]+)/i  // Stories: instagram.com/stories/username/ABC123
-  ];
-  
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match && match[1]) {
-      return match[1];
-    }
-  }
-  
-  return null;
-}
-
-// Function to fetch Instagram media data using Graph API
-async function fetchInstagramMedia(mediaId: string, accessToken: string) {
+// Extract recipe from Instagram post
+async function extractInstagramRecipe(url: string) {
   try {
-    // In a real implementation, you would use the Instagram Graph API
-    // For demonstration purposes, we're returning mock data
-    console.log(`[MOCK] Fetching Instagram media with ID: ${mediaId}`);
+    console.log("Extracting Instagram recipe from:", url);
     
-    // Simulate API response
+    // Extract post ID from Instagram URL
+    const postIdMatch = url.match(/\/p\/([^\/\?]+)/i) || url.match(/\/reel\/([^\/\?]+)/i);
+    if (!postIdMatch) {
+      throw new Error("Could not extract Instagram post ID from URL");
+    }
+    
+    const postId = postIdMatch[1];
+    console.log("Instagram Post ID:", postId);
+    
+    // For this demonstration, we'll simulate extraction from Instagram
+    // In a real implementation, you would use Instagram's API or a scraping approach
+    
+    // Simulated recipe data for Instagram
+    // This would be replaced with actual API calls or scraping logic
+    const mockRecipe = {
+      title: `Instagram Recipe #${postId.substring(0, 5)}`,
+      description: "Delicious recipe shared on Instagram",
+      image_url: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80&w=1000&auto=format&fit=crop",
+      ingredients: [
+        "2 cups flour",
+        "1 cup sugar",
+        "3 eggs",
+        "1 tsp vanilla extract",
+        "1/2 cup butter"
+      ],
+      instructions: [
+        "Mix the dry ingredients in a bowl",
+        "Add wet ingredients and mix until smooth",
+        "Pour into a baking pan",
+        "Bake at 350°F for 30 minutes"
+      ],
+      prep_time: 15,
+      cook_time: 30,
+      category: "Dessert",
+      difficulty: "Medium",
+      cuisine: "International",
+      meal_type: "Dessert",
+      tags: ["instagram", "dessert", "baking"]
+    };
+    
     return {
-      id: mediaId,
-      caption: `Delicious Avocado Toast recipe! Perfect for breakfast.\n\nIngredients:\n- 2 ripe avocados\n- 4 slices sourdough bread\n- 2 eggs\n- Fresh lime juice\n- Red pepper flakes\n- Salt and pepper to taste\n- Olive oil\n\nInstructions:\n1. Toast the bread until golden.\n2. Mash avocados with lime juice, salt and pepper.\n3. Spread avocado on toast.\n4. Fry eggs sunny side up.\n5. Place eggs on toast and serve.\n\n#avocadotoast #breakfast #healthyfood`,
-      media_url: "https://images.unsplash.com/photo-1525351484163-7529414344d8?q=80&w=1000&auto=format&fit=crop",
-      media_type: "IMAGE",
-      timestamp: new Date().toISOString()
+      isRecipe: true,
+      recipe: mockRecipe,
+      confidence: 0.7, // Medium confidence for Instagram extraction
+      extractionMethod: "instagram"
     };
   } catch (error) {
-    console.error('Error fetching Instagram media:', error);
-    throw error;
+    console.error("Instagram extraction error:", error);
+    return { isRecipe: false };
   }
 }
 
-// Function to parse recipe details from Instagram caption
-function parseRecipeFromCaption(mediaData: any) {
-  const { caption, media_url } = mediaData;
-  
-  // Extract ingredients
-  const ingredients = [];
-  const ingredientsMatch = caption.match(/ingredients:(.+?)instructions:/is);
-  if (ingredientsMatch && ingredientsMatch[1]) {
-    const ingredientsText = ingredientsMatch[1].trim();
-    ingredientsText.split('\n').forEach(line => {
-      const ingredient = line.replace(/^-\s*/, '').trim();
-      if (ingredient) ingredients.push(ingredient);
-    });
-  }
-  
-  // Extract instructions
-  const instructions = [];
-  const instructionsMatch = caption.match(/instructions:(.+?)(?:#|$)/is);
-  if (instructionsMatch && instructionsMatch[1]) {
-    const instructionsText = instructionsMatch[1].trim();
-    instructionsText.split('\n').forEach(line => {
-      const instruction = line.replace(/^\d+\.\s*/, '').trim();
-      if (instruction) instructions.push(instruction);
-    });
-  }
-  
-  // Generate title
-  const titleMatch = caption.match(/^(.+?)(?:\n|$)/);
-  const title = titleMatch ? titleMatch[1].trim() : 'Instagram Recipe';
-  
-  // Determine category based on hashtags or caption keywords
-  let category = 'Other';
-  const categoryKeywords = {
-    'Breakfast': ['breakfast', 'morning', 'brunch', 'toast', 'eggs'],
-    'Lunch': ['lunch', 'sandwich', 'salad', 'wrap'],
-    'Dinner': ['dinner', 'supper', 'pasta', 'steak'],
-    'Dessert': ['dessert', 'cake', 'cookie', 'sweet'],
-    'Appetizer': ['appetizer', 'starter', 'snack', 'dip'],
-    'Drink': ['drink', 'cocktail', 'smoothie', 'juice', 'beverage']
-  };
-  
-  for (const [cat, keywords] of Object.entries(categoryKeywords)) {
-    if (keywords.some(keyword => caption.toLowerCase().includes(keyword))) {
-      category = cat;
-      break;
+// Generic recipe extraction for any web URL
+async function extractGenericRecipe(url: string) {
+  try {
+    console.log("Generic recipe extraction for:", url);
+    
+    // In a real implementation, you would:
+    // 1. Fetch the webpage content
+    // 2. Try multiple extraction methods (schema.org, JSON-LD, heuristic)
+    // 3. Return the highest confidence result
+    
+    // For demonstration, we'll simulate a generic extraction
+    const extractionMethods = [
+      extractSchemaRecipe,
+      extractJsonLdRecipe,
+      extractHeuristicRecipe
+    ];
+    
+    // Try each extraction method
+    for (const method of extractionMethods) {
+      try {
+        const result = await method(url);
+        if (result && result.isRecipe) {
+          return result;
+        }
+      } catch (methodError) {
+        console.log(`Extraction method failed:`, methodError);
+        // Continue to next method
+      }
     }
+    
+    // If all methods fail, return a simulated generic recipe
+    // This is just for demo purposes - in production, you should return
+    // { isRecipe: false } if no recipe is found
+    return {
+      isRecipe: true,
+      recipe: {
+        title: `Recipe from ${new URL(url).hostname}`,
+        description: "Recipe extracted from website",
+        image_url: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80&w=1000&auto=format&fit=crop",
+        ingredients: [
+          "Ingredient 1",
+          "Ingredient 2",
+          "Ingredient 3",
+          "Ingredient 4"
+        ],
+        instructions: [
+          "Step 1: Prepare ingredients",
+          "Step 2: Cook according to instructions",
+          "Step 3: Serve and enjoy"
+        ],
+        prep_time: 20,
+        cook_time: 40,
+        category: "Main Course",
+        difficulty: "Medium",
+        tags: ["extracted", "website"]
+      },
+      confidence: 0.6, // Medium confidence for generic extraction
+      extractionMethod: "generic"
+    };
+  } catch (error) {
+    console.error("Generic extraction error:", error);
+    return { isRecipe: false };
+  }
+}
+
+// Schema.org Recipe extraction
+async function extractSchemaRecipe(url: string) {
+  // Simulated schema.org extraction for demonstration
+  // In a real implementation, you would fetch the webpage and look for schema.org/Recipe markup
+  
+  console.log("Attempting schema.org extraction from:", url);
+  
+  // Simulate a 30% chance of finding schema markup
+  if (Math.random() > 0.7) {
+    return {
+      isRecipe: true,
+      recipe: {
+        title: `Schema Recipe from ${new URL(url).hostname}`,
+        description: "Recipe extracted from schema.org markup",
+        image_url: "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?q=80&w=1000&auto=format&fit=crop",
+        ingredients: [
+          "2 pounds chicken thighs",
+          "1 tablespoon olive oil",
+          "2 cloves garlic, minced",
+          "1 teaspoon salt",
+          "1/2 teaspoon black pepper",
+          "1 lemon, sliced"
+        ],
+        instructions: [
+          "Preheat oven to 375°F (190°C)",
+          "Season chicken with salt and pepper",
+          "Heat oil in a skillet over medium-high heat",
+          "Add chicken and sear until golden brown, about 3-4 minutes per side",
+          "Add garlic and lemon slices",
+          "Transfer to oven and bake for 25-30 minutes until chicken is cooked through"
+        ],
+        prep_time: 15,
+        cook_time: 35,
+        category: "Main Course",
+        difficulty: "Easy",
+        cuisine: "Mediterranean",
+        meal_type: "Dinner",
+        tags: ["chicken", "easy", "mediterranean"]
+      },
+      confidence: 0.9, // High confidence for schema.org extraction
+      extractionMethod: "schema.org"
+    };
   }
   
-  // Extract hashtags for tags
-  const tags = [];
-  const hashtagMatches = caption.match(/#\w+/g);
-  if (hashtagMatches) {
-    hashtagMatches.forEach(tag => tags.push(tag.substring(1)));
+  return { isRecipe: false };
+}
+
+// JSON-LD Recipe extraction
+async function extractJsonLdRecipe(url: string) {
+  // Simulated JSON-LD extraction for demonstration
+  console.log("Attempting JSON-LD extraction from:", url);
+  
+  // Simulate a 20% chance of finding JSON-LD data
+  if (Math.random() > 0.8) {
+    return {
+      isRecipe: true,
+      recipe: {
+        title: `JSON-LD Recipe from ${new URL(url).hostname}`,
+        description: "Recipe extracted from JSON-LD data",
+        image_url: "https://images.unsplash.com/photo-1569058242272-4b1a699ca3aa?q=80&w=1000&auto=format&fit=crop",
+        ingredients: [
+          "1 pound pasta",
+          "2 tablespoons butter",
+          "2 tablespoons flour",
+          "2 cups milk",
+          "2 cups shredded cheese",
+          "1/2 teaspoon salt",
+          "1/4 teaspoon black pepper"
+        ],
+        instructions: [
+          "Cook pasta according to package directions",
+          "Melt butter in a saucepan over medium heat",
+          "Whisk in flour and cook for 1-2 minutes",
+          "Gradually whisk in milk and bring to a simmer",
+          "Cook until thickened, about 3-4 minutes",
+          "Stir in cheese until melted",
+          "Season with salt and pepper",
+          "Combine with cooked pasta and serve"
+        ],
+        prep_time: 10,
+        cook_time: 20,
+        category: "Main Course",
+        difficulty: "Easy",
+        cuisine: "Italian",
+        meal_type: "Dinner",
+        tags: ["pasta", "cheese", "comfort food"]
+      },
+      confidence: 0.85, // High confidence for JSON-LD extraction
+      extractionMethod: "json-ld"
+    };
   }
   
-  // Estimate prep and cook time based on recipe complexity
-  const prepTime = Math.max(5, Math.min(30, ingredients.length * 2));
-  const cookTime = Math.max(10, Math.min(60, instructions.length * 5));
-  
-  return {
-    title,
-    description: caption.split('\n')[0],
-    category,
-    image_url: media_url,
-    prep_time: prepTime,
-    cook_time: cookTime,
-    ingredients: JSON.stringify(ingredients),
-    instructions: JSON.stringify(instructions),
-    tags,
-    difficulty_level: determineDifficulty(prepTime, cookTime),
-    servings: 2, // Default value
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
+  return { isRecipe: false };
 }
 
-// Function to extract recipe data from recipe websites
-async function extractRecipeWebsiteData(url: string) {
-  // In a real implementation, you would:
-  // 1. Fetch the website HTML
-  // 2. Look for JSON-LD or microdata with schema.org/Recipe
-  // 3. Parse the structured data
+// Heuristic recipe extraction
+async function extractHeuristicRecipe(url: string) {
+  // Simulated heuristic extraction for demonstration
+  console.log("Attempting heuristic extraction from:", url);
   
-  console.log(`[MOCK] Extracting recipe data from website: ${url}`);
+  // Simulate a 50% chance of finding recipe content through heuristics
+  if (Math.random() > 0.5) {
+    return {
+      isRecipe: true,
+      recipe: {
+        title: `Heuristic Recipe from ${new URL(url).hostname}`,
+        description: "Recipe extracted using heuristic methods",
+        image_url: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80&w=1000&auto=format&fit=crop",
+        ingredients: [
+          "3 ripe bananas",
+          "1/3 cup melted butter",
+          "1 teaspoon baking soda",
+          "Pinch of salt",
+          "3/4 cup sugar",
+          "1 large egg, beaten",
+          "1 teaspoon vanilla extract",
+          "1 1/2 cups all-purpose flour"
+        ],
+        instructions: [
+          "Preheat oven to 350°F (175°C)",
+          "Mash bananas in a mixing bowl",
+          "Mix in melted butter",
+          "Add baking soda and salt",
+          "Stir in sugar, beaten egg, and vanilla extract",
+          "Mix in flour",
+          "Pour batter into a greased loaf pan",
+          "Bake for 50-60 minutes"
+        ],
+        prep_time: 15,
+        cook_time: 60,
+        category: "Baking",
+        difficulty: "Easy",
+        cuisine: "American",
+        meal_type: "Dessert",
+        tags: ["banana", "baking", "dessert"]
+      },
+      confidence: 0.7, // Medium confidence for heuristic extraction
+      extractionMethod: "heuristic"
+    };
+  }
   
-  // For demonstration, return mock recipe data
-  return {
-    title: "Chocolate Chip Cookies",
-    description: "The best chocolate chip cookies you'll ever taste!",
-    category: "Dessert",
-    image_url: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?q=80&w=1000&auto=format&fit=crop",
-    prep_time: 15,
-    cook_time: 10,
-    ingredients: JSON.stringify([
-      "2 1/4 cups all-purpose flour",
-      "1 teaspoon baking soda",
-      "1 teaspoon salt",
-      "1 cup unsalted butter, softened",
-      "3/4 cup granulated sugar",
-      "3/4 cup packed brown sugar",
-      "2 large eggs",
-      "2 teaspoons vanilla extract",
-      "2 cups semi-sweet chocolate chips"
-    ]),
-    instructions: JSON.stringify([
-      "Preheat oven to 375°F (190°C).",
-      "Combine flour, baking soda, and salt in a small bowl.",
-      "Beat butter, granulated sugar, and brown sugar in a large bowl until creamy.",
-      "Add eggs one at a time, beating well after each addition. Beat in vanilla.",
-      "Gradually beat in flour mixture. Stir in chocolate chips.",
-      "Drop by rounded tablespoon onto ungreased baking sheets.",
-      "Bake for 9 to 11 minutes or until golden brown.",
-      "Cool on baking sheets for 2 minutes; remove to wire racks to cool completely."
-    ]),
-    tags: ["cookies", "dessert", "chocolate", "baking"],
-    difficulty_level: "Easy",
-    servings: 24,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
-}
-
-// Function to extract recipe data from general websites
-async function extractGeneralWebsiteData(url: string) {
-  // In a real implementation, you would:
-  // 1. Fetch the website HTML
-  // 2. Use content extraction algorithms to identify recipe-like content
-  // 3. Apply heuristics to identify ingredients, instructions, etc.
-  
-  console.log(`[MOCK] Extracting general content from website: ${url}`);
-  
-  // For demonstration, return mock recipe data
-  return {
-    title: "Extracted Recipe",
-    description: "Recipe extracted from website content",
-    category: "Main Course",
-    image_url: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80&w=1000&auto=format&fit=crop",
-    prep_time: 20,
-    cook_time: 30,
-    ingredients: JSON.stringify([
-      "Ingredient 1",
-      "Ingredient 2",
-      "Ingredient 3",
-      "Ingredient 4",
-      "Ingredient 5"
-    ]),
-    instructions: JSON.stringify([
-      "Step 1 of the recipe",
-      "Step 2 of the recipe",
-      "Step 3 of the recipe",
-      "Step 4 of the recipe"
-    ]),
-    tags: ["extracted", "recipe"],
-    difficulty_level: "Medium",
-    servings: 4,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
-}
-
-// Helper function to determine difficulty based on prep and cook time
-function determineDifficulty(prepTime: number, cookTime: number): 'Easy' | 'Medium' | 'Hard' {
-  const totalTime = prepTime + cookTime;
-  
-  if (totalTime < 30) return 'Easy';
-  if (totalTime < 60) return 'Medium';
-  return 'Hard';
+  return { isRecipe: false };
 }

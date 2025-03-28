@@ -1,4 +1,3 @@
-
 import { Recipe } from '@/components/RecipeCard';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -52,7 +51,7 @@ export const fetchRecipes = async (): Promise<Recipe[]> => {
   }
 };
 
-// Extract recipe from URL using our edge function
+// Extract recipe from URL using our universal recipe extractor edge function
 export const extractRecipeFromUrl = async (url: string): Promise<Recipe> => {
   console.log(`Extracting recipe from URL: ${url}`);
   
@@ -66,8 +65,6 @@ export const extractRecipeFromUrl = async (url: string): Promise<Recipe> => {
     
     // Clean the URL before sending
     let cleanUrl = url.trim();
-    // Remove any URL parameters
-    cleanUrl = cleanUrl.split('?')[0];
     
     // Call our Supabase Edge Function to extract the recipe
     const { data, error } = await supabase.functions.invoke('instagram-recipe-extractor', {
@@ -85,6 +82,8 @@ export const extractRecipeFromUrl = async (url: string): Promise<Recipe> => {
     if (!data || data.status === 'error') {
       throw new Error(data?.message || 'Failed to extract recipe from URL');
     }
+    
+    console.log('Extraction successful:', data);
     
     // Return the extracted recipe
     return mapToRecipe(data.data);

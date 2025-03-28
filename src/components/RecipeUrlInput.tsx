@@ -6,65 +6,92 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import AuthModal from './Auth/AuthModal';
+import { Badge } from '@/components/ui/badge';
 
 interface RecipeUrlInputProps {
   onSubmit: (url: string) => void;
   isLoading: boolean;
 }
 
+// Source type identification
+type UrlSourceType = 'instagram' | 'recipe-website' | 'general-website' | 'youtube' | 'social-media' | 'food-blog' | null;
+
+// Popular recipe websites
+const RECIPE_WEBSITES = [
+  { domain: 'allrecipes.com', name: 'AllRecipes' },
+  { domain: 'foodnetwork.com', name: 'Food Network' },
+  { domain: 'epicurious.com', name: 'Epicurious' },
+  { domain: 'bonappetit.com', name: 'Bon Appétit' },
+  { domain: 'taste.com', name: 'Taste' },
+  { domain: 'delish.com', name: 'Delish' },
+  { domain: 'seriouseats.com', name: 'Serious Eats' },
+  { domain: 'cookinglight.com', name: 'Cooking Light' },
+  { domain: 'eatingwell.com', name: 'EatingWell' },
+  { domain: 'simplyrecipes.com', name: 'Simply Recipes' },
+  { domain: 'food52.com', name: 'Food52' },
+  { domain: 'thekitchn.com', name: 'The Kitchn' },
+  { domain: 'tasty.co', name: 'Tasty' },
+  { domain: 'bbcgoodfood.com', name: 'BBC Good Food' },
+  { domain: 'cooking.nytimes.com', name: 'NYT Cooking' },
+  { domain: 'smittenkitchen.com', name: 'Smitten Kitchen' },
+  { domain: 'budgetbytes.com', name: 'Budget Bytes' },
+  { domain: 'kingarthurbaking.com', name: 'King Arthur Baking' },
+  { domain: 'sallysbakingaddiction.com', name: 'Sally\'s Baking Addiction' },
+  { domain: 'minimalistbaker.com', name: 'Minimalist Baker' }
+];
+
+// Social media patterns
+const SOCIAL_MEDIA_PATTERNS = [
+  { pattern: /instagram\.com\/(p|reel|stories)\/[^\/\s]+/i, type: 'instagram', name: 'Instagram' },
+  { pattern: /facebook\.com\/[^\/\s]+\/posts\/|facebook\.com\/permalink\.php/i, type: 'social-media', name: 'Facebook' },
+  { pattern: /twitter\.com\/[^\/\s]+\/status\//i, type: 'social-media', name: 'Twitter' },
+  { pattern: /pinterest\.com\/pin\//i, type: 'social-media', name: 'Pinterest' },
+  { pattern: /tiktok\.com\/@[^\/\s]+\/video\//i, type: 'social-media', name: 'TikTok' },
+  { pattern: /youtube\.com\/watch\?v=|youtu\.be\//i, type: 'youtube', name: 'YouTube' }
+];
+
 const RecipeUrlInput: React.FC<RecipeUrlInputProps> = ({ onSubmit, isLoading }) => {
   const [url, setUrl] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isValidUrl, setIsValidUrl] = useState<boolean | null>(null);
-  const [urlSource, setUrlSource] = useState<string | null>(null);
+  const [urlSource, setUrlSource] = useState<{ type: UrlSourceType; name: string } | null>(null);
+  const [urlConfidence, setUrlConfidence] = useState<'high' | 'medium' | 'low' | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
   // Check if URL is valid for recipe extraction
   const isValidRecipeUrl = (url: string): boolean => {
-    // Instagram URLs
-    const instagramPattern = /instagram\.com\/(p|reel|stories)\/[^\/\s]+/i;
-    
-    // Common recipe websites
-    const recipeWebsites = [
-      /allrecipes\.com/i,
-      /foodnetwork\.com/i,
-      /epicurious\.com/i,
-      /bonappetit\.com/i,
-      /taste\.com/i,
-      /delish\.com/i,
-      /seriouseats\.com/i,
-      /cookinglight\.com/i,
-      /eatingwell\.com/i,
-      /simplyrecipes\.com/i,
-      /food52\.com/i,
-      /thekitchn\.com/i,
-      /tasty\.co/i
-    ];
-    
     // General URL validation - must be http/https
     const generalUrlPattern = /^(https?:\/\/)[^\s$.?#].[^\s]*$/i;
-    
-    // Detect URL source
-    if (instagramPattern.test(url)) {
-      setUrlSource('instagram');
-      return true;
+    if (!generalUrlPattern.test(url)) {
+      setUrlSource(null);
+      setUrlConfidence(null);
+      return false;
     }
     
-    for (const pattern of recipeWebsites) {
+    // Check for social media sources
+    for (const { pattern, type, name } of SOCIAL_MEDIA_PATTERNS) {
       if (pattern.test(url)) {
-        setUrlSource('recipe-website');
+        setUrlSource({ type: type as UrlSourceType, name });
+        setUrlConfidence(type === 'instagram' ? 'high' : 'medium');
         return true;
       }
     }
     
-    if (generalUrlPattern.test(url)) {
-      setUrlSource('general-website');
-      return true;
+    // Check for known recipe websites
+    const urlLower = url.toLowerCase();
+    for (const { domain, name } of RECIPE_WEBSITES) {
+      if (urlLower.includes(domain)) {
+        setUrlSource({ type: 'recipe-website', name });
+        setUrlConfidence('high');
+        return true;
+      }
     }
     
-    setUrlSource(null);
-    return false;
+    // Accept any valid URL as a general website
+    setUrlSource({ type: 'general-website', name: 'Website' });
+    setUrlConfidence('low');
+    return true;
   };
 
   // Update validation state when URL changes
@@ -75,6 +102,7 @@ const RecipeUrlInput: React.FC<RecipeUrlInputProps> = ({ onSubmit, isLoading }) 
     if (newUrl.trim() === '') {
       setIsValidUrl(null);
       setUrlSource(null);
+      setUrlConfidence(null);
     } else {
       setIsValidUrl(isValidRecipeUrl(newUrl));
     }
@@ -105,10 +133,19 @@ const RecipeUrlInput: React.FC<RecipeUrlInputProps> = ({ onSubmit, isLoading }) 
     if (!isValidRecipeUrl(url)) {
       toast({
         title: "Invalid URL",
-        description: "Please enter a valid recipe URL",
+        description: "Please enter a valid URL",
         variant: "destructive",
       });
       return;
+    }
+    
+    // If URL confidence is low, show a warning toast but still proceed
+    if (urlConfidence === 'low') {
+      toast({
+        title: "Generic Website Detected",
+        description: "We'll try our best to extract recipe content from this page",
+        variant: "default",
+      });
     }
     
     onSubmit(url);
@@ -125,12 +162,12 @@ const RecipeUrlInput: React.FC<RecipeUrlInputProps> = ({ onSubmit, isLoading }) 
         if (isValid && urlSource) {
           toast({
             title: "URL Pasted",
-            description: `${urlSource.charAt(0).toUpperCase() + urlSource.slice(1).replace('-', ' ')} URL detected and pasted`,
+            description: `${urlSource.name} URL detected and pasted`,
           });
         } else if (!isValid) {
           toast({
-            title: "Not a Recipe URL",
-            description: "The pasted URL doesn't appear to be from a supported recipe source",
+            title: "Not a Valid URL",
+            description: "The pasted text doesn't appear to be a valid URL",
             variant: "destructive",
           });
         }
@@ -151,18 +188,32 @@ const RecipeUrlInput: React.FC<RecipeUrlInputProps> = ({ onSubmit, isLoading }) 
     return isValidUrl ? "border-green-500" : "border-red-500";
   };
 
-  // Get source icon and text for display
-  const getSourceInfo = () => {
-    if (!urlSource) return null;
+  // Get source indicator color based on confidence
+  const getConfidenceColor = () => {
+    if (!urlConfidence) return "bg-muted";
     
     return {
-      instagram: { color: 'text-purple', text: 'Instagram recipe' },
-      'recipe-website': { color: 'text-coral', text: 'Recipe website' },
-      'general-website': { color: 'text-teal', text: 'Website content' }
-    }[urlSource] || null;
+      high: "bg-green-500",
+      medium: "bg-yellow-500",
+      low: "bg-orange-500"
+    }[urlConfidence];
   };
 
-  const sourceInfo = getSourceInfo();
+  // Get source description text
+  const getSourceDescription = () => {
+    if (!urlSource) return null;
+    
+    const descriptions = {
+      'instagram': 'Instagram post or reel',
+      'recipe-website': `Recipe from ${urlSource.name}`,
+      'youtube': 'YouTube cooking video',
+      'social-media': `${urlSource.name} post`,
+      'food-blog': 'Food blog recipe',
+      'general-website': 'General website content'
+    };
+    
+    return descriptions[urlSource.type] || 'Web content';
+  };
 
   return (
     <>
@@ -171,7 +222,7 @@ const RecipeUrlInput: React.FC<RecipeUrlInputProps> = ({ onSubmit, isLoading }) 
           <div className="glass p-6 relative overflow-hidden">
             <h2 className="font-mono text-xl mb-4 uppercase tracking-tight text-teal">Extract Recipe</h2>
             <p className="text-offwhite/70 mb-6">
-              Paste a recipe URL to extract the complete recipe
+              Paste any URL and we'll try to extract the complete recipe
             </p>
             
             <div className="flex gap-2">
@@ -217,15 +268,27 @@ const RecipeUrlInput: React.FC<RecipeUrlInputProps> = ({ onSubmit, isLoading }) 
             
             {isValidUrl === false && url.trim() !== '' && (
               <p className="text-xs text-red-500 mt-2">
-                Please enter a valid recipe URL
+                Please enter a valid URL
               </p>
             )}
             
-            {isValidUrl && sourceInfo && (
-              <p className={`text-xs ${sourceInfo.color} mt-2 flex items-center gap-1`}>
-                <span className="block w-1.5 h-1.5 rounded-full bg-current"></span>
-                {sourceInfo.text} detected
-              </p>
+            {isValidUrl && urlSource && (
+              <div className="mt-3 flex items-center gap-2">
+                <span className={`inline-block w-2 h-2 rounded-full ${getConfidenceColor()}`}></span>
+                <Badge variant="outline" className="text-xs py-0 h-5">
+                  {getSourceDescription()}
+                </Badge>
+                
+                {urlConfidence === 'high' && (
+                  <span className="text-xs text-green-500">High confidence</span>
+                )}
+                {urlConfidence === 'medium' && (
+                  <span className="text-xs text-yellow-500">Medium confidence</span>
+                )}
+                {urlConfidence === 'low' && (
+                  <span className="text-xs text-orange-500">We'll try our best</span>
+                )}
+              </div>
             )}
             
             {!user && (
