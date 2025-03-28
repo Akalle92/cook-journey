@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { useBackground } from './BackgroundContext';
 
@@ -164,10 +163,8 @@ export const LayeredBackground: React.FC<LayeredBackgroundProps> = ({ className 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       // Apply noise texture with low opacity
-      if (timeOfDay !== 'night') {
-        const noiseOpacity = timeOfDay === 'night' ? 5 : 10;
-        ctx.putImageData(generateNoise(noiseOpacity), 0, 0);
-      }
+      const noiseOpacity = timeOfDay === 'night' ? 5 : 10;
+      ctx.putImageData(generateNoise(noiseOpacity), 0, 0);
       
       // Update and draw particles
       particleSystem.forEach(particle => {

@@ -48,8 +48,6 @@ const CookingTimeChart: React.FC<CookingTimeChartProps> = ({ timeData }) => {
                 left: 20,
                 bottom: 5,
               }}
-              animationDuration={1500}
-              animationBegin={500}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis 
