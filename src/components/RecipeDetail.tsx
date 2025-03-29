@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteRecipe } from '@/services/recipeService';
 import { useQueryClient } from '@tanstack/react-query';
+import RecipeImage from '@/components/RecipeImage';
 
 interface RecipeDetailProps {
   recipe: Recipe | null;
@@ -82,12 +83,14 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) 
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="glass max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-          <div className="relative h-56 overflow-hidden">
+          <div className="relative h-56 md:h-64 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-t from-charcoal to-transparent z-10" />
-            <img 
+            <RecipeImage 
               src={recipe.image} 
               alt={recipe.title} 
-              className="w-full h-full object-cover"
+              className="w-full h-full"
+              aspectRatio={16/9}
+              priority={true}
             />
             <Button 
               variant="ghost" 

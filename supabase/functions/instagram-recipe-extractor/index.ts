@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { load } from "https://esm.sh/cheerio@1.0.0-rc.12";
@@ -851,4 +850,148 @@ function logDebug(message: string, data?: any) {
       console.log(`DEBUG: ${message}`);
     }
   }
+}
+
+// Function to extract the best image
+async function extractBestImage(html, url) {
+  const images = [];
+  
+  // First try to get structured data images
+  try {
+    const jsonLdMatches = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/gs);
+    if (jsonLdMatches) {
+      for (const match of jsonLdMatches) {
+        const jsonContent = match.replace(/<script type="application\/ld\+json">(.*?)<\/script>/s, '$1');
+        const data = JSON.parse(jsonContent);
+        
+        if (data.image) {
+          if (typeof data.image === 'string') {
+            images.push({ url: data.image, source: 'json-ld', confidence: 0.9 });
+          } else if (Array.isArray(data.image)) {
+            data.image.forEach(img => {
+              if (typeof img === 'string') {
+                images.push({ url: img, source: 'json-ld', confidence: 0.9 });
+              } else if (typeof img === 'object' && img.url) {
+                images.push({ 
+                  url: img.url, 
+                  width: img.width, 
+                  height: img.height,
+                  source: 'json-ld', 
+                  confidence: 0.9 
+                });
+              }
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.log('Error extracting JSON-LD images:', e);
+  }
+  
+  // Try to get Open Graph images
+  try {
+    const ogImageMatch = html.match(/<meta property="og:image" content="(.*?)"/i);
+    if (ogImageMatch && ogImageMatch[1]) {
+      images.push({ url: ogImageMatch[1], source: 'og-image', confidence: 0.8 });
+    }
+  } catch (e) {
+    console.log('Error extracting Open Graph images:', e);
+  }
+  
+  // Try to get Twitter card images
+  try {
+    const twitterImageMatch = html.match(/<meta name="twitter:image" content="(.*?)"/i);
+    if (twitterImageMatch && twitterImageMatch[1]) {
+      images.push({ url: twitterImageMatch[1], source: 'twitter-card', confidence: 0.8 });
+    }
+  } catch (e) {
+    console.log('Error extracting Twitter Card images:', e);
+  }
+  
+  // Try to get images from the content
+  try {
+    const imgMatches = html.match(/<img[^>]+src="([^">]+)"/g);
+    if (imgMatches) {
+      for (const match of imgMatches) {
+        const srcMatch = match.match(/src="([^">]+)"/);
+        if (srcMatch && srcMatch[1]) {
+          // Check if it's a recipe image (skip logos, icons, etc.)
+          const imgSrc = srcMatch[1];
+          const isLikelyRecipeImage = 
+            !imgSrc.includes('logo') && 
+            !imgSrc.includes('icon') && 
+            !imgSrc.includes('avatar') &&
+            !imgSrc.includes('banner') &&
+            (imgSrc.includes('recipe') || 
+             imgSrc.includes('food') || 
+             imgSrc.includes('dish') || 
+             imgSrc.includes('meal') ||
+             match.includes('data-pin-media') ||
+             match.includes('hero') ||
+             match.includes('featured'));
+          
+          if (isLikelyRecipeImage) {
+            // Look for width and height
+            const widthMatch = match.match(/width="(\d+)"/);
+            const heightMatch = match.match(/height="(\d+)"/);
+            const width = widthMatch ? parseInt(widthMatch[1]) : null;
+            const height = heightMatch ? parseInt(heightMatch[1]) : null;
+            
+            // Prioritize larger images
+            const confidence = (width && height && width > 300 && height > 300) ? 0.7 : 0.5;
+            
+            images.push({ 
+              url: srcMatch[1], 
+              width, 
+              height,
+              source: 'img-tag',
+              confidence
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.log('Error extracting content images:', e);
+  }
+  
+  if (images.length === 0) {
+    return null;
+  }
+  
+  // Sort images by confidence and size
+  const sortedImages = images.sort((a, b) => {
+    // First by confidence
+    if (a.confidence !== b.confidence) {
+      return b.confidence - a.confidence;
+    }
+    
+    // Then by size if available
+    if (a.width && a.height && b.width && b.height) {
+      const aSize = a.width * a.height;
+      const bSize = b.width * b.height;
+      return bSize - aSize;
+    }
+    
+    return 0;
+  });
+  
+  console.log(`Found ${images.length} images, best candidate:`, sortedImages[0]);
+  
+  // Make sure the URL is absolute
+  let bestImageUrl = sortedImages[0].url;
+  if (!bestImageUrl.startsWith('http')) {
+    const urlObj = new URL(url);
+    if (bestImageUrl.startsWith('/')) {
+      bestImageUrl = `${urlObj.protocol}//${urlObj.hostname}${bestImageUrl}`;
+    } else {
+      bestImageUrl = `${urlObj.protocol}//${urlObj.hostname}/${bestImageUrl}`;
+    }
+  }
+  
+  return {
+    url: bestImageUrl,
+    metadata: sortedImages[0]
+  };
 }

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { GlassCard, GlassCardContent } from '@/components/ui/glass-card';
 import { useBackground } from '@/components/BackgroundSystem/BackgroundContext';
 import { cn } from '@/lib/utils';
+import RecipeImage from '@/components/RecipeImage';
 
 export interface ExtractionMethod {
   method: string;
@@ -33,6 +34,8 @@ export interface Recipe {
   confidence?: number;
   extractionResults?: ExtractionMethod[];
   debugInfo?: any;
+  // For API responses
+  data?: any;
 }
 
 interface RecipeCardProps {
@@ -125,10 +128,11 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
     >
       <div className="relative h-48 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal to-transparent z-10" />
-        <img 
+        <RecipeImage 
           src={recipe.image} 
           alt={recipe.title} 
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          className="w-full h-full"
+          withZoomEffect={true}
         />
         <Badge className="absolute top-3 right-3 z-20 bg-gradient-primary text-charcoal font-mono text-xs">
           {recipe.category}
