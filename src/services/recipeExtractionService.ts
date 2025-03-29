@@ -1,102 +1,90 @@
-
 import { Recipe } from '@/components/RecipeCard';
-import { supabase } from '@/integrations/supabase/client';
+import { mapToRecipe } from '@/utils/recipeMappers';
+import { formatRecipeTitle } from '@/utils/recipeDataUtils';
 
-// Extract recipe from URL using our universal recipe extractor edge function
-export const extractRecipeFromUrl = async (url: string): Promise<any> => {
-  console.log(`Extracting recipe from URL: ${url}`);
-  
+const RECIPE_API_URL = process.env.NEXT_PUBLIC_RECIPE_API_URL || 'http://localhost:3001';
+
+// Function to perform the actual extraction from the URL
+const performExtraction = async (url: string): Promise<Recipe | null> => {
   try {
-    // Get the current user's ID to associate with the recipe
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('You must be logged in to extract recipes');
-    }
-    
-    // Clean the URL before sending
-    let cleanUrl = url.trim();
-    
-    // Call our Supabase Edge Function to extract the recipe
-    const { data, error } = await supabase.functions.invoke('instagram-recipe-extractor', {
-      body: {
-        url: cleanUrl,
-        userId: user.id
-      }
+    const response = await fetch(`${RECIPE_API_URL}/extract`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
     });
-    
-    if (error) {
-      console.error('Error calling recipe extractor:', error);
-      throw new Error(error.message || 'Failed to extract recipe');
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Extraction failed:', errorData);
+      throw new Error(errorData.message || 'Extraction failed');
     }
-    
-    if (!data || data.status === 'error') {
-      console.error('Extraction failed:', data);
-      throw new Error(data?.message || 'Failed to extract recipe from URL');
+
+    const result = await response.json();
+    console.log('Extraction result:', result);
+
+    if (result && result.data) {
+      return mapToRecipe(result.data);
+    } else {
+      console.warn('No data returned from extraction:', result);
+      return null;
     }
-    
-    console.log('Extraction successful - extracted data:', data);
-    
-    // Return the extraction result with all data
-    return data;
   } catch (error: any) {
-    console.error('Error in extractRecipeFromUrl:', error);
-    
-    // Enhanced error handling for better debugging
-    if (error.response) {
-      const responseError = {
-        ...error,
-        response: {
-          ...error.response,
-          data: error.response.data
-        }
-      };
-      throw responseError;
-    }
-    
-    throw new Error(error.message || 'Failed to extract recipe. Please try again.');
+    console.error('Error during extraction:', error);
+    throw new Error(error.message || 'Extraction failed');
   }
 };
 
-// Extract and enhance recipe using free AI model
-export const enhanceRecipeWithFreeModel = async (url: string): Promise<any> => {
-  console.log(`Enhancing recipe from URL with free model: ${url}`);
-  
+// Function to perform recipe enhancement using a free model
+const performEnhancement = async (url: string): Promise<Recipe | null> => {
   try {
-    // Get the current user's ID to associate with the recipe
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('You must be logged in to generate recipes');
-    }
-    
-    // Clean the URL before sending
-    let cleanUrl = url.trim();
-    
-    // Call our free AI model edge function
-    const { data, error } = await supabase.functions.invoke('free-model-recipe-generator', {
-      body: {
-        url: cleanUrl,
-        userId: user.id
-      }
+    const userId = 'free-model-user'; // Replace with actual user ID if available
+    const response = await fetch(`${RECIPE_API_URL}/free-model-recipe-generator`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url, userId }),
     });
-    
-    if (error) {
-      console.error('Error calling free model recipe generator:', error);
-      throw new Error(error.message || 'Failed to generate recipe');
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Enhancement failed:', errorData);
+      throw new Error(errorData.message || 'Enhancement failed');
     }
-    
-    if (!data || data.status === 'error') {
-      console.error('Free model enhancement failed:', data);
-      throw new Error(data?.message || 'Failed to enhance recipe from URL');
+
+    const result = await response.json();
+    console.log('Enhancement result:', result);
+
+    if (result && result.data) {
+      return mapToRecipe(result.data);
+    } else {
+      console.warn('No data returned from enhancement:', result);
+      return null;
     }
-    
-    console.log('Free model enhancement successful - data:', data);
-    
-    // Return the enhanced recipe data
-    return data;
   } catch (error: any) {
-    console.error('Error in enhanceRecipeWithFreeModel:', error);
-    throw new Error(error.message || 'Failed to enhance recipe. Please try again.');
+    console.error('Error during enhancement:', error);
+    throw new Error(error.message || 'Enhancement failed');
   }
+};
+
+export const extractRecipeFromUrl = async (url: string) => {
+  const extractedRecipe = await performExtraction(url);
+  
+  if (extractedRecipe && extractedRecipe.title) {
+    extractedRecipe.title = formatRecipeTitle(extractedRecipe.title);
+  }
+  
+  return extractedRecipe;
+};
+
+export const enhanceRecipeWithFreeModel = async (url: string) => {
+  const enhancedRecipe = await performEnhancement(url);
+  
+  if (enhancedRecipe && enhancedRecipe.title) {
+    enhancedRecipe.title = formatRecipeTitle(enhancedRecipe.title);
+  }
+  
+  return enhancedRecipe;
 };

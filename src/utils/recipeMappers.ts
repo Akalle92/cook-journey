@@ -1,4 +1,3 @@
-
 import { Recipe } from '@/components/RecipeCard';
 import { extractFirstImageUrl } from './imageUtils';
 import { 
@@ -8,6 +7,21 @@ import {
   normalizeIngredient,
   normalizeInstruction
 } from './recipeDataUtils';
+
+// Enhanced title formatting function
+const formatRecipeTitle = (title: string): string => {
+  // Remove any existing "(Restaurant Style)" or similar suffixes
+  const cleanTitle = title.replace(/\s*\(.*\)$/, '').trim();
+  
+  // Capitalize each word
+  const formattedTitle = cleanTitle
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+  
+  // Add "(Restaurant Style)" suffix
+  return `${formattedTitle} Recipe (Restaurant Style)`;
+};
 
 // Convert Supabase recipe data to our Recipe type with enhanced mapping
 export const mapToRecipe = (item: any): Recipe => {
@@ -81,7 +95,7 @@ export const mapToRecipe = (item: any): Recipe => {
 
   return {
     id: item.id,
-    title: item.title || 'Untitled Recipe',
+    title: formatRecipeTitle(item.title || 'Untitled Recipe'),
     image: extractFirstImageUrl(item.image_url || item.image) || 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80&w=1000&auto=format&fit=crop',
     category: category,
     prepTime: prepTime,
