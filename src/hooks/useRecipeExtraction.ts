@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { extractRecipeFromUrl, enhanceRecipeWithClaude, enhanceRecipeWithFreeModel } from '@/services/recipeExtractionService';
+import { extractRecipeFromUrl, enhanceRecipeWithFreeModel } from '@/services/recipeExtractionService';
 import { Recipe, ExtractionMethod } from '@/components/RecipeCard';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
@@ -22,7 +23,6 @@ interface ExtractionResponse {
 
 export const useRecipeExtraction = () => {
   const [extractionError, setExtractionError] = useState<ExtractionError | null>(null);
-  const [debugInfo, setDebugInfo] = useState<any | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [showRecipeDetail, setShowRecipeDetail] = useState(false);
   const [retries, setRetries] = useState(0);
@@ -32,8 +32,8 @@ export const useRecipeExtraction = () => {
   const queryClient = useQueryClient();
 
   const extractRecipeMutation = useMutation({
-    mutationFn: ({ url, debugMode }: { url: string, debugMode?: boolean }) => 
-      extractRecipeFromUrl(url, debugMode),
+    mutationFn: ({ url }: { url: string }) => 
+      extractRecipeFromUrl(url),
     onSuccess: (response: ExtractionResponse) => {
       console.log('Successfully extracted recipe:', response);
 
@@ -52,14 +52,6 @@ export const useRecipeExtraction = () => {
           variant: "default"
         });
 
-        if (response.extractionResults) {
-          setDebugInfo({
-            method: response.method,
-            confidence: response.confidence,
-            results: response.extractionResults
-          });
-        }
-
         setExtractionError(null);
         queryClient.invalidateQueries({
           queryKey: ['recipes']
@@ -71,7 +63,7 @@ export const useRecipeExtraction = () => {
       
       let errorMessage = "Failed to extract recipe from the provided URL.";
       let extractionResults = [];
-      let suggestion = "Try using Claude AI to enhance this content instead.";
+      let suggestion = "Try using AI to enhance this content instead.";
       
       try {
         if (error.message) {
@@ -105,62 +97,9 @@ export const useRecipeExtraction = () => {
     }
   });
 
-  const claudeRecipeMutation = useMutation({
-    mutationFn: ({ url, debugMode }: { url: string, debugMode?: boolean }) => 
-      enhanceRecipeWithClaude(url, debugMode),
-    onSuccess: (response: ExtractionResponse) => {
-      console.log('Successfully extracted recipe with Claude:', response);
-
-      if (response.data) {
-        const recipeData = response.data;
-        
-        queryClient.setQueryData(['recipes'], (oldData: Recipe[] = []) => {
-          return [recipeData, ...oldData];
-        });
-
-        setSelectedRecipe(recipeData);
-        setShowRecipeDetail(true);
-        toast({
-          title: "Recipe Created with Claude AI",
-          description: "Your recipe has been successfully extracted and enhanced!",
-          variant: "default"
-        });
-
-        if (response.debugInfo) {
-          setDebugInfo(response.debugInfo);
-        }
-
-        setExtractionError(null);
-        queryClient.invalidateQueries({
-          queryKey: ['recipes']
-        });
-      }
-    },
-    onError: (error: any) => {
-      console.error("Error extracting recipe with Claude:", error);
-      
-      let errorMessage = "Failed to enhance recipe from the provided URL.";
-      if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      setExtractionError({
-        status: "error",
-        message: errorMessage,
-        suggestion: "Please try again or try a different URL."
-      });
-      
-      toast({
-        title: "Claude Enhancement Failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    }
-  });
-
   const freeModelRecipeMutation = useMutation({
-    mutationFn: ({ url, debugMode }: { url: string, debugMode?: boolean }) => 
-      enhanceRecipeWithFreeModel(url, debugMode),
+    mutationFn: ({ url }: { url: string }) => 
+      enhanceRecipeWithFreeModel(url),
     onSuccess: (response: ExtractionResponse) => {
       console.log('Successfully extracted recipe with free model:', response);
 
@@ -174,14 +113,10 @@ export const useRecipeExtraction = () => {
         setSelectedRecipe(recipeData);
         setShowRecipeDetail(true);
         toast({
-          title: "Recipe Created with Free AI",
+          title: "Recipe Created with AI",
           description: "Your recipe has been successfully extracted and enhanced!",
           variant: "default"
         });
-
-        if (response.debugInfo) {
-          setDebugInfo(response.debugInfo);
-        }
 
         setExtractionError(null);
         queryClient.invalidateQueries({
@@ -204,14 +139,14 @@ export const useRecipeExtraction = () => {
       });
       
       toast({
-        title: "Free AI Enhancement Failed",
+        title: "AI Enhancement Failed",
         description: errorMessage,
         variant: "destructive"
       });
     }
   });
 
-  const handleRecipeExtraction = (url: string, useClaude: boolean = false, useFreeModel: boolean = false, debugMode: boolean = false) => {
+  const handleRecipeExtraction = (url: string, useAI: boolean = false) => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -222,26 +157,19 @@ export const useRecipeExtraction = () => {
     }
 
     setExtractionError(null);
-    setDebugInfo(null);
 
-    if (useFreeModel) {
+    if (useAI) {
       toast({
         title: "AI-Enhancing Recipe",
-        description: "Processing the URL with free AI model..."
+        description: "Processing the URL with AI..."
       });
-      freeModelRecipeMutation.mutate({ url, debugMode });
-    } else if (useClaude) {
-      toast({
-        title: "AI-Enhancing Recipe",
-        description: "Processing the URL with Claude AI..."
-      });
-      claudeRecipeMutation.mutate({ url, debugMode });
+      freeModelRecipeMutation.mutate({ url });
     } else {
       toast({
         title: "Extracting Recipe",
         description: "Processing the URL..."
       });
-      extractRecipeMutation.mutate({ url, debugMode });
+      extractRecipeMutation.mutate({ url });
     }
   };
 
@@ -254,37 +182,31 @@ export const useRecipeExtraction = () => {
       });
       setTimeout(() => {
         setRetries(retries + 1);
-        handleRecipeExtraction(url, false, true, true);
+        handleRecipeExtraction(url, true);
       }, delay);
     } else {
       toast({
         title: "Maximum retries reached",
-        description: "Please try with Claude AI enhancement enabled instead.",
+        description: "Please try again with a different URL.",
         variant: "destructive"
       });
     }
   };
   
-  const handleTryWithClaude = (url: string) => {
-    handleRecipeExtraction(url, true, false, true);
-  };
-
-  const handleTryWithFreeModel = (url: string) => {
-    handleRecipeExtraction(url, false, true, true);
+  const handleTryWithAI = (url: string) => {
+    handleRecipeExtraction(url, true);
   };
 
   return {
     extractionError,
-    debugInfo,
     selectedRecipe,
     showRecipeDetail,
     retries,
     maxRetries,
-    isLoading: extractRecipeMutation.isPending || claudeRecipeMutation.isPending || freeModelRecipeMutation.isPending,
+    isLoading: extractRecipeMutation.isPending || freeModelRecipeMutation.isPending,
     handleRecipeExtraction,
     handleRetry,
-    handleTryWithClaude,
-    handleTryWithFreeModel,
+    handleTryWithAI,
     setSelectedRecipe,
     setShowRecipeDetail,
     resetRetries: () => setRetries(0)

@@ -13,8 +13,6 @@ const RecipeContent: React.FC<RecipeContentProps> = ({ recipe }) => {
   const [activeTab, setActiveTab] = useState<'ingredients' | 'instructions'>('ingredients');
   const { toast } = useToast();
   
-  console.log('Recipe content component - instructions:', recipe.instructions);
-  
   return (
     <>
       <div className="px-6 pb-2">
@@ -59,10 +57,26 @@ interface IngredientsTabProps {
 }
 
 const IngredientsTab: React.FC<IngredientsTabProps> = ({ ingredients }) => {
+  // Format ingredients to remove any erratic formatting
+  const formattedIngredients = ingredients.map(ingredient => {
+    // Clean up whitespace and formatting issues
+    let cleaned = ingredient.trim();
+    
+    // Capitalize first letter if it's not
+    if (cleaned && cleaned.length > 0) {
+      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    }
+    
+    // Make sure there's no double spaces
+    cleaned = cleaned.replace(/\s\s+/g, ' ');
+    
+    return cleaned;
+  }).filter(item => item.length > 0); // Remove empty items
+  
   return (
     <ul className="space-y-3 font-mono">
-      {ingredients && ingredients.length > 0 ? (
-        ingredients.map((ingredient, index) => (
+      {formattedIngredients && formattedIngredients.length > 0 ? (
+        formattedIngredients.map((ingredient, index) => (
           <li key={index} className="flex items-start gap-2">
             <div className="w-1.5 h-1.5 mt-2 bg-coral rounded-full"></div>
             <span>{ingredient}</span>
@@ -81,10 +95,31 @@ interface InstructionsTabProps {
 }
 
 const InstructionsTab: React.FC<InstructionsTabProps> = ({ instructions, onTimerClick }) => {
+  // Format instructions to remove any erratic formatting
+  const formattedInstructions = instructions.map(instruction => {
+    // Clean up whitespace and formatting issues
+    let cleaned = instruction.trim();
+    
+    // Capitalize first letter if it's not
+    if (cleaned && cleaned.length > 0) {
+      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    }
+    
+    // Make sure there's a period at the end if missing
+    if (cleaned && !cleaned.endsWith('.') && !cleaned.endsWith('!') && !cleaned.endsWith('?')) {
+      cleaned += '.';
+    }
+    
+    // Make sure there's no double spaces
+    cleaned = cleaned.replace(/\s\s+/g, ' ');
+    
+    return cleaned;
+  }).filter(item => item.length > 0); // Remove empty items
+  
   return (
     <ol className="space-y-6">
-      {instructions && instructions.length > 0 ? (
-        instructions.map((instruction, index) => (
+      {formattedInstructions && formattedInstructions.length > 0 ? (
+        formattedInstructions.map((instruction, index) => (
           <li key={index} className="flex gap-3">
             <div className="flex-shrink-0 bg-muted w-8 h-8 font-mono text-teal flex items-center justify-center">
               {index + 1}

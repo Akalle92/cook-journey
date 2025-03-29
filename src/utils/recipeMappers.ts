@@ -37,16 +37,28 @@ export const mapToRecipe = (item: any): Recipe => {
     instructions = [];
   }
 
-  // Log the parsed instructions to debug
-  console.log('Parsed instructions for recipe:', item.title, instructions);
+  // Format the category nicely with proper capitalization
+  let category = extractFirstValue(item.category) || 'Uncategorized';
+  if (category) {
+    category = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+  }
+
+  // Format prep time to be more user-friendly
+  let prepTime = item.prep_time ? `${item.prep_time} min` : 'N/A';
+  
+  // Format difficulty level with proper capitalization
+  let difficulty = determineDifficulty(item.prep_time, item.cook_time);
+  if (difficulty) {
+    difficulty = difficulty.charAt(0).toUpperCase() + difficulty.slice(1).toLowerCase();
+  }
 
   return {
     id: item.id,
     title: item.title || 'Untitled Recipe',
     image: extractFirstImageUrl(item.image_url) || 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80&w=1000&auto=format&fit=crop',
-    category: extractFirstValue(item.category) || 'Uncategorized',
-    prepTime: item.prep_time ? `${item.prep_time} min` : 'N/A',
-    difficulty: determineDifficulty(item.prep_time, item.cook_time),
+    category: category,
+    prepTime: prepTime,
+    difficulty: difficulty,
     ingredients: ingredients,
     instructions: instructions
   };

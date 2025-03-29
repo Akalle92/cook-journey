@@ -2,28 +2,25 @@
 import React, { useState } from 'react';
 import RecipeUrlInput from '@/components/RecipeUrlInput';
 import ExtractionError from './ExtractionError';
-import DebugInfo from './DebugInfo';
 import { useRecipeExtraction } from '@/hooks/useRecipeExtraction';
 
 const ExtractRecipeSection: React.FC = () => {
   const [url, setUrl] = useState('');
   const {
     extractionError,
-    debugInfo,
     isLoading,
     retries,
     maxRetries,
     handleRecipeExtraction,
     handleRetry,
-    handleTryWithClaude,
-    handleTryWithFreeModel,
+    handleTryWithAI,
     resetRetries
   } = useRecipeExtraction();
 
-  const onSubmit = (submittedUrl: string, useClaude: boolean = false, useFreeModel: boolean = false, debugMode: boolean = false) => {
+  const onSubmit = (submittedUrl: string, useAI: boolean = false) => {
     setUrl(submittedUrl);
     resetRetries();
-    handleRecipeExtraction(submittedUrl, useClaude, useFreeModel, debugMode);
+    handleRecipeExtraction(submittedUrl, useAI);
   };
 
   const onRetry = () => {
@@ -32,15 +29,9 @@ const ExtractRecipeSection: React.FC = () => {
     }
   };
 
-  const onTryWithClaude = () => {
+  const onTryWithAI = () => {
     if (url) {
-      handleTryWithClaude(url);
-    }
-  };
-
-  const onTryWithFreeModel = () => {
-    if (url) {
-      handleTryWithFreeModel(url);
+      handleTryWithAI(url);
     }
   };
 
@@ -55,15 +46,12 @@ const ExtractRecipeSection: React.FC = () => {
         <ExtractionError
           error={extractionError}
           onRetry={onRetry}
-          onTryWithClaude={onTryWithClaude}
-          onTryWithFreeModel={onTryWithFreeModel}
+          onTryWithAI={onTryWithAI}
           isLoading={isLoading}
           retries={retries}
           maxRetries={maxRetries}
         />
       )}
-      
-      {debugInfo && <DebugInfo debugInfo={debugInfo} />}
     </div>
   );
 };

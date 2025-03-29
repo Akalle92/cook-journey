@@ -1,19 +1,15 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
-import { ExtractionMethod } from '@/components/RecipeCard';
+import { Button } from '@/components/ui/button';
 
 interface ExtractionErrorProps {
   error: {
-    status: string;
     message: string;
-    extractionResults?: ExtractionMethod[];
     suggestion?: string;
   };
   onRetry: () => void;
-  onTryWithClaude: () => void;
-  onTryWithFreeModel: () => void;
+  onTryWithAI: () => void;
   isLoading: boolean;
   retries: number;
   maxRetries: number;
@@ -22,64 +18,40 @@ interface ExtractionErrorProps {
 const ExtractionError: React.FC<ExtractionErrorProps> = ({
   error,
   onRetry,
-  onTryWithClaude,
-  onTryWithFreeModel,
+  onTryWithAI,
   isLoading,
   retries,
   maxRetries
 }) => {
   return (
-    <div className="mt-4 p-4 bg-red-900/20 border border-red-800 rounded-md">
-      <h3 className="text-lg font-medium text-red-300 mb-2">Extraction Error</h3>
-      <p className="text-red-200 text-sm mb-3">{error.message}</p>
-      
-      {error.suggestion && (
-        <p className="text-yellow-300 text-sm">{error.suggestion}</p>
-      )}
-      
-      {error.extractionResults && error.extractionResults.length > 0 && (
-        <div className="mt-4">
-          <p className="text-sm font-medium text-red-300 mb-2">Details:</p>
-          <div className="space-y-2">
-            {error.extractionResults.map((result, index) => (
-              <div key={index} className="text-xs bg-red-900/20 p-2 rounded">
-                <p>Method: {result.method} - <span className={result.success ? "text-green-400" : "text-red-400"}>
-                  {result.success ? "Success" : "Failed"}
-                </span></p>
-                {result.error && <p className="text-red-400">{result.error.message}</p>}
-              </div>
-            ))}
-          </div>
+    <div className="bg-red-900/30 border border-red-800 rounded-md p-4 flex items-start gap-3 mt-4">
+      <AlertTriangle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+      <div>
+        <p className="text-red-300 font-medium text-sm">Extraction failed</p>
+        <p className="text-red-200/80 text-xs mt-1">{error.message}</p>
+        {error.suggestion && (
+          <p className="text-red-200/80 text-xs mt-1">{error.suggestion}</p>
+        )}
+        
+        <div className="flex gap-2 mt-3">
+          <Button 
+            size="sm" 
+            variant="secondary" 
+            onClick={onRetry}
+            disabled={retries >= maxRetries || isLoading}
+          >
+            Retry Extraction
+          </Button>
+          
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={onTryWithAI}
+            disabled={isLoading}
+          >
+            Try with AI
+          </Button>
         </div>
-      )}
-      
-      <div className="flex flex-wrap gap-2 mt-3">
-        <Button 
-          size="sm" 
-          variant="secondary" 
-          onClick={onRetry}
-          disabled={retries >= maxRetries || isLoading}
-        >
-          Retry Extraction
-        </Button>
-        
-        <Button 
-          size="sm" 
-          variant="outline" 
-          onClick={onTryWithClaude}
-          disabled={isLoading}
-        >
-          Try with Claude AI
-        </Button>
-        
-        <Button 
-          size="sm" 
-          variant="outline"
-          onClick={onTryWithFreeModel}
-          disabled={isLoading}
-        >
-          Try with Free AI
-        </Button>
       </div>
     </div>
   );
