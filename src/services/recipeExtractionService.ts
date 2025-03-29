@@ -26,6 +26,46 @@ const performExtraction = async (url: string): Promise<Recipe | null> => {
     console.log('Extraction result:', result);
 
     if (result && result.data) {
+      // Ensure ingredients are properly parsed before mapping
+      if (result.data.ingredients) {
+        // Handle different ingredient formats
+        if (typeof result.data.ingredients === 'string') {
+          try {
+            // Try parsing as JSON
+            const parsed = JSON.parse(result.data.ingredients);
+            result.data.ingredients = Array.isArray(parsed) ? parsed : [result.data.ingredients];
+          } catch (e) {
+            // If parsing fails, split by common separators
+            result.data.ingredients = result.data.ingredients
+              .split(/\n|•|\*|\d+\.|,/)
+              .filter((item: string) => item.trim().length > 0)
+              .map((item: string) => item.trim());
+          }
+        } else if (!Array.isArray(result.data.ingredients)) {
+          result.data.ingredients = [String(result.data.ingredients)];
+        }
+      }
+
+      // Ensure instructions are properly parsed before mapping
+      if (result.data.instructions) {
+        // Handle different instruction formats
+        if (typeof result.data.instructions === 'string') {
+          try {
+            // Try parsing as JSON
+            const parsed = JSON.parse(result.data.instructions);
+            result.data.instructions = Array.isArray(parsed) ? parsed : [result.data.instructions];
+          } catch (e) {
+            // If parsing fails, split by common separators
+            result.data.instructions = result.data.instructions
+              .split(/\n|(?:\d+\.)|(?:Step \d+:)/)
+              .filter((item: string) => item.trim().length > 0)
+              .map((item: string) => item.trim());
+          }
+        } else if (!Array.isArray(result.data.instructions)) {
+          result.data.instructions = [String(result.data.instructions)];
+        }
+      }
+
       return mapToRecipe(result.data);
     } else {
       console.warn('No data returned from extraction:', result);
@@ -59,6 +99,46 @@ const performEnhancement = async (url: string): Promise<Recipe | null> => {
     console.log('Enhancement result:', result);
 
     if (result && result.data) {
+      // Ensure ingredients are properly parsed before mapping
+      if (result.data.ingredients) {
+        // Handle different ingredient formats
+        if (typeof result.data.ingredients === 'string') {
+          try {
+            // Try parsing as JSON
+            const parsed = JSON.parse(result.data.ingredients);
+            result.data.ingredients = Array.isArray(parsed) ? parsed : [result.data.ingredients];
+          } catch (e) {
+            // If parsing fails, split by common separators
+            result.data.ingredients = result.data.ingredients
+              .split(/\n|•|\*|\d+\.|,/)
+              .filter((item: string) => item.trim().length > 0)
+              .map((item: string) => item.trim());
+          }
+        } else if (!Array.isArray(result.data.ingredients)) {
+          result.data.ingredients = [String(result.data.ingredients)];
+        }
+      }
+
+      // Ensure instructions are properly parsed before mapping
+      if (result.data.instructions) {
+        // Handle different instruction formats
+        if (typeof result.data.instructions === 'string') {
+          try {
+            // Try parsing as JSON
+            const parsed = JSON.parse(result.data.instructions);
+            result.data.instructions = Array.isArray(parsed) ? parsed : [result.data.instructions];
+          } catch (e) {
+            // If parsing fails, split by common separators
+            result.data.instructions = result.data.instructions
+              .split(/\n|(?:\d+\.)|(?:Step \d+:)/)
+              .filter((item: string) => item.trim().length > 0)
+              .map((item: string) => item.trim());
+          }
+        } else if (!Array.isArray(result.data.instructions)) {
+          result.data.instructions = [String(result.data.instructions)];
+        }
+      }
+      
       return mapToRecipe(result.data);
     } else {
       console.warn('No data returned from enhancement:', result);
