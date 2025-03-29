@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, Utensils, ChefHat, Star, Heart, Share2, BookmarkIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { GlassCard, GlassCardContent } from '@/components/ui/glass-card';
@@ -8,6 +7,8 @@ import { cn } from '@/lib/utils';
 import RecipeImage from '@/components/RecipeImage';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getCategoriesForRecipe } from '@/services/categoryService';
+import { Category } from '@/components/RecipeCategories/CategorySelector';
 
 export interface ExtractionMethod {
   method: string;
@@ -84,9 +85,24 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
   const { setCuisineType } = useBackground();
   const [isHovered, setIsHovered] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [recipeCategories, setRecipeCategories] = useState<Category[]>([]);
   const { toast } = useToast();
   
-  // Set the cuisine type based on the recipe category when hovering over card
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categories = await getCategoriesForRecipe(recipe.id);
+        if (categories.length > 0) {
+          setRecipeCategories(categories);
+        }
+      } catch (error) {
+        console.error("Error fetching recipe categories:", error);
+      }
+    };
+    
+    fetchCategories();
+  }, [recipe.id]);
+
   const handleMouseEnter = () => {
     const cuisineType = (categoryToCuisine[recipe.category as keyof typeof categoryToCuisine] || 'default') as any;
     setCuisineType(cuisineType);
@@ -97,7 +113,6 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
     setIsHovered(false);
   };
 
-  // Handle save/bookmark action
   const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsSaved(!isSaved);
@@ -108,7 +123,6 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
     });
   };
   
-  // Handle share action
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
     toast({
@@ -118,17 +132,14 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
     });
   };
 
-  // Get accent position based on difficulty
   const getAccentPosition = (): "bottom" | "left" | "top" | "right" | "none" => {
     return difficultyToAccent[recipe.difficulty] || 'none';
   };
 
-  // Get material class based on category
   const getMaterialClass = () => {
     return categoryToMaterial[recipe.category as keyof typeof categoryToMaterial] || 'material-ceramic';
   };
 
-  // Get difficulty color
   const getDifficultyColor = () => {
     switch(recipe.difficulty) {
       case 'Easy': return 'text-emerald';
@@ -138,29 +149,23 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
     }
   };
 
-  // Format ingredients count with improved validation
   const getIngredientsCount = () => {
     return recipe.ingredients?.filter(item => item && item.trim().length > 0).length || 0;
   };
 
-  // Format prep time to be more readable with better parsing
   const getFormattedPrepTime = () => {
     if (!recipe.prepTime) return '30 min';
     
-    // Handle string format
     if (typeof recipe.prepTime === 'string') {
-      // If it's already formatted with time units, return as is
       if (recipe.prepTime.toLowerCase().includes('min') || 
           recipe.prepTime.toLowerCase().includes('hour')) {
         return recipe.prepTime;
       }
       
-      // Extract numbers from the string
       const timeMatch = recipe.prepTime.match(/\d+/);
       if (timeMatch) {
         const minutes = parseInt(timeMatch[0], 10);
         
-        // Format time appropriately based on length
         if (minutes >= 60) {
           const hours = Math.floor(minutes / 60);
           const remainingMinutes = minutes % 60;
@@ -173,7 +178,6 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
       }
     }
     
-    // Handle numeric format
     if (typeof recipe.prepTime === 'number') {
       const minutes = recipe.prepTime;
       if (minutes >= 60) {
@@ -189,7 +193,6 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
     return recipe.prepTime;
   };
 
-  // Get the extraction confidence display
   const getConfidenceIndicator = () => {
     if (recipe.confidence) {
       if (recipe.confidence >= 0.8) return { color: 'bg-green-500/20', label: 'High' };
@@ -223,17 +226,38 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
           withZoomEffect={true}
           priority={false}
         />
-        <Badge className="absolute top-3 left-3 z-20 bg-gradient-primary text-charcoal font-mono text-xs">
-          {recipe.category}
-        </Badge>
         
-        {confidenceInfo && (
-          <Badge className={`absolute top-3 right-3 z-20 ${confidenceInfo.color} text-charcoal font-mono text-xs`}>
-            {confidenceInfo.label} Confidence
-          </Badge>
-        )}
+        <div className="absolute top-3 left-3 z-20 flex flex-wrap gap-1 max-w-[70%]">
+          {recipeCategories.length > 0 ? (
+            recipeCategories.slice(0, 2).map((category) => (
+              <Badge 
+                key={category.id} 
+                className={cn("bg-gradient-primary text-charcoal font-mono text-xs", category.color)}
+              >
+                {category.name}
+              </Badge>
+            ))
+          ) : (
+            <Badge className="bg-gradient-primary text-charcoal font-mono text-xs">
+              {recipe.category}
+            </Badge>
+          )}
+          
+          {recipeCategories.length > 2 && (
+            <Badge className="bg-charcoal/70 text-offwhite font-mono text-xs">
+              +{recipeCategories.length - 2}
+            </Badge>
+          )}
+        </div>
         
-        {/* Quick action buttons that appear on hover */}
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+          {confidenceInfo && (
+            <Badge className={`${confidenceInfo.color} text-charcoal font-mono text-xs`}>
+              {confidenceInfo.label} Confidence
+            </Badge>
+          )}
+        </div>
+        
         <div className={`absolute right-3 bottom-3 z-20 flex items-center gap-1.5 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
           <Button
             variant="ghost" 

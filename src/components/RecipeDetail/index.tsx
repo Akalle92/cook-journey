@@ -6,6 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { deleteRecipe } from '@/services/recipeApiService';
 import RecipeDetailDialog from './RecipeDetailDialog';
 import DeleteRecipeDialog from './DeleteRecipeDialog';
+import CookingModeView from '../CookingMode/CookingModeView';
+import ShoppingListGenerator from '../ShoppingList/ShoppingListGenerator';
 
 interface RecipeDetailProps {
   recipe: Recipe | null;
@@ -16,6 +18,8 @@ interface RecipeDetailProps {
 const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [cookingModeActive, setCookingModeActive] = useState(false);
+  const [shoppingListOpen, setShoppingListOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -55,13 +59,28 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) 
     }
   };
 
+  const startCookingMode = () => {
+    setCookingModeActive(true);
+    onClose(); // Close the detail dialog
+  };
+
+  const exitCookingMode = () => {
+    setCookingModeActive(false);
+  };
+
+  const openShoppingList = () => {
+    setShoppingListOpen(true);
+  };
+
   return (
     <>
       <RecipeDetailDialog 
         recipe={recipe}
-        isOpen={isOpen}
+        isOpen={isOpen && !cookingModeActive}
         onClose={onClose}
         onDeleteClick={handleDeleteClick}
+        onStartCooking={startCookingMode}
+        onGenerateShoppingList={openShoppingList}
       />
 
       <DeleteRecipeDialog
@@ -70,6 +89,20 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, isOpen, onClose }) 
         isDeleting={isDeleting}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
+      />
+
+      {cookingModeActive && recipe && (
+        <CookingModeView 
+          recipe={recipe} 
+          onClose={exitCookingMode}
+          onGenerateShoppingList={openShoppingList}
+        />
+      )}
+
+      <ShoppingListGenerator
+        recipe={recipe}
+        isOpen={shoppingListOpen}
+        onClose={() => setShoppingListOpen(false)}
       />
     </>
   );
