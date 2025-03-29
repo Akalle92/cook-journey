@@ -6,6 +6,18 @@ import { GlassCard, GlassCardContent } from '@/components/ui/glass-card';
 import { useBackground } from '@/components/BackgroundSystem/BackgroundContext';
 import { cn } from '@/lib/utils';
 
+export interface ExtractionMethod {
+  method: string;
+  success: boolean;
+  confidence?: number;
+  error?: {
+    name: string;
+    message: string;
+    stack?: string;
+  };
+  data?: any;
+}
+
 export interface Recipe {
   id: string;
   title: string;
@@ -15,6 +27,12 @@ export interface Recipe {
   difficulty: 'Easy' | 'Medium' | 'Hard';
   ingredients: string[];
   instructions: string[];
+  
+  // Additional properties for extraction and debugging
+  method?: string;
+  confidence?: number;
+  extractionResults?: ExtractionMethod[];
+  debugInfo?: any;
 }
 
 interface RecipeCardProps {

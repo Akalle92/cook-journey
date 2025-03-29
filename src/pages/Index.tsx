@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Header from '@/components/Header';
@@ -6,24 +5,12 @@ import RecipeUrlInput from '@/components/RecipeUrlInput';
 import TrendingRecipes from '@/components/TrendingRecipes';
 import RecipeGrid from '@/components/RecipeGrid';
 import RecipeDetail from '@/components/RecipeDetail';
-import { Recipe } from '@/components/RecipeCard';
+import { Recipe, ExtractionMethod } from '@/components/RecipeCard';
 import { fetchRecipes, extractRecipeFromUrl, enhanceRecipeWithClaude } from '@/services/recipeService';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 
 // Define types for extraction errors
-interface ExtractionMethod {
-  method: string;
-  success: boolean;
-  confidence?: number;
-  error?: {
-    name: string;
-    message: string;
-    stack?: string;
-  };
-  data?: any;
-}
-
 interface ExtractionError {
   status: string;
   message: string;
@@ -74,13 +61,15 @@ const Index = () => {
       console.log('Successfully extracted recipe:', response);
 
       if (response.data) {
+        const recipeData = response.data;
+        
         // Update the recipes in the cache with the new recipe
         queryClient.setQueryData(['recipes'], (oldData: Recipe[] = []) => {
-          return [response.data, ...oldData];
+          return [recipeData, ...oldData];
         });
 
         // Show the new recipe in the detail view
-        setSelectedRecipe(response.data);
+        setSelectedRecipe(recipeData);
         setShowRecipeDetail(true);
         toast({
           title: "Recipe Extracted",
@@ -154,13 +143,15 @@ const Index = () => {
       console.log('Successfully extracted recipe with Claude:', response);
 
       if (response.data) {
+        const recipeData = response.data;
+        
         // Update the recipes in the cache with the new recipe
         queryClient.setQueryData(['recipes'], (oldData: Recipe[] = []) => {
-          return [response.data, ...oldData];
+          return [recipeData, ...oldData];
         });
 
         // Show the new recipe in the detail view
-        setSelectedRecipe(response.data);
+        setSelectedRecipe(recipeData);
         setShowRecipeDetail(true);
         toast({
           title: "Recipe Created with Claude AI",

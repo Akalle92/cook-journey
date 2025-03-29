@@ -174,7 +174,7 @@ export const deleteRecipe = async (recipeId: string): Promise<void> => {
 };
 
 // Extract recipe from URL using our universal recipe extractor edge function
-export const extractRecipeFromUrl = async (url: string, debugMode: boolean = false): Promise<Recipe> => {
+export const extractRecipeFromUrl = async (url: string, debugMode: boolean = false): Promise<any> => {
   console.log(`Extracting recipe from URL: ${url}, Debug mode: ${debugMode}`);
   
   try {
@@ -192,10 +192,9 @@ export const extractRecipeFromUrl = async (url: string, debugMode: boolean = fal
     const { data, error } = await supabase.functions.invoke('instagram-recipe-extractor', {
       body: {
         url: cleanUrl,
-        userId: user.id
-      },
-      // Add debug parameter to function URL if debug mode is enabled
-      query: debugMode ? { debug: 'true' } : undefined
+        userId: user.id,
+        ...(debugMode ? { body: { url: cleanUrl, userId: user.id, debug: true } } : {})
+      }
     });
     
     if (error) {
@@ -210,13 +209,8 @@ export const extractRecipeFromUrl = async (url: string, debugMode: boolean = fal
     
     console.log('Extraction successful - extracted data:', data);
     
-    // Return the extracted recipe with extraction metadata
-    return {
-      ...mapToRecipe(data.data),
-      method: data.method,
-      confidence: data.confidence,
-      extractionResults: data.extractionResults
-    };
+    // Return the extraction result with all data
+    return data;
   } catch (error: any) {
     console.error('Error in extractRecipeFromUrl:', error);
     
@@ -237,7 +231,7 @@ export const extractRecipeFromUrl = async (url: string, debugMode: boolean = fal
 };
 
 // Extract and enhance recipe using Claude AI
-export const enhanceRecipeWithClaude = async (url: string, debugMode: boolean = false): Promise<Recipe> => {
+export const enhanceRecipeWithClaude = async (url: string, debugMode: boolean = false): Promise<any> => {
   console.log(`Enhancing recipe from URL with Claude: ${url}, Debug mode: ${debugMode}`);
   
   try {
@@ -255,10 +249,9 @@ export const enhanceRecipeWithClaude = async (url: string, debugMode: boolean = 
     const { data, error } = await supabase.functions.invoke('claude-recipe-generator', {
       body: {
         url: cleanUrl,
-        userId: user.id
-      },
-      // Add debug parameter to function URL if debug mode is enabled
-      query: debugMode ? { debug: 'true' } : undefined
+        userId: user.id,
+        debug: debugMode
+      }
     });
     
     if (error) {
@@ -273,11 +266,8 @@ export const enhanceRecipeWithClaude = async (url: string, debugMode: boolean = 
     
     console.log('Claude enhancement successful - data:', data);
     
-    // Return the enhanced recipe with debug info
-    return {
-      ...mapToRecipe(data.data),
-      debugInfo: data.debugInfo
-    };
+    // Return the enhanced recipe data
+    return data;
   } catch (error: any) {
     console.error('Error in enhanceRecipeWithClaude:', error);
     throw new Error(error.message || 'Failed to enhance recipe. Please try again.');
