@@ -50,7 +50,7 @@ const Dashboard = () => {
         </div>
         
         {!user && (
-          <GlassCard className="animated-border">
+          <GlassCard>
             <GlassCardHeader>
               <GlassCardTitle>Authentication Required</GlassCardTitle>
               <GlassCardDescription>
@@ -109,3 +109,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
