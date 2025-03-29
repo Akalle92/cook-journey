@@ -38,6 +38,7 @@ const RecipeContent: React.FC<RecipeContentProps> = ({ recipe }) => {
         ) : (
           <InstructionsTab 
             instructions={recipe.instructions} 
+            prepTime={recipe.prepTime}
             onTimerClick={() => {
               toast({
                 title: "Timer",
@@ -58,20 +59,22 @@ interface IngredientsTabProps {
 
 const IngredientsTab: React.FC<IngredientsTabProps> = ({ ingredients }) => {
   // Format ingredients to remove any erratic formatting
-  const formattedIngredients = ingredients.map(ingredient => {
-    // Clean up whitespace and formatting issues
-    let cleaned = ingredient.trim();
-    
-    // Capitalize first letter if it's not
-    if (cleaned && cleaned.length > 0) {
-      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-    }
-    
-    // Make sure there's no double spaces
-    cleaned = cleaned.replace(/\s\s+/g, ' ');
-    
-    return cleaned;
-  }).filter(item => item.length > 0); // Remove empty items
+  const formattedIngredients = ingredients
+    .filter(ingredient => ingredient && ingredient.trim().length > 0)
+    .map(ingredient => {
+      // Clean up whitespace and formatting issues
+      let cleaned = ingredient.trim();
+      
+      // Capitalize first letter if it's not
+      if (cleaned && cleaned.length > 0) {
+        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      }
+      
+      // Make sure there's no double spaces
+      cleaned = cleaned.replace(/\s\s+/g, ' ');
+      
+      return cleaned;
+    });
   
   return (
     <ul className="space-y-3 font-mono">
@@ -91,49 +94,65 @@ const IngredientsTab: React.FC<IngredientsTabProps> = ({ ingredients }) => {
 
 interface InstructionsTabProps {
   instructions: string[];
+  prepTime?: string;
   onTimerClick: () => void;
 }
 
-const InstructionsTab: React.FC<InstructionsTabProps> = ({ instructions, onTimerClick }) => {
+const InstructionsTab: React.FC<InstructionsTabProps> = ({ instructions, prepTime, onTimerClick }) => {
   // Format instructions to remove any erratic formatting
-  const formattedInstructions = instructions.map(instruction => {
-    // Clean up whitespace and formatting issues
-    let cleaned = instruction.trim();
+  const formattedInstructions = instructions
+    .filter(instruction => instruction && instruction.trim().length > 0)
+    .map(instruction => {
+      // Clean up whitespace and formatting issues
+      let cleaned = instruction.trim();
+      
+      // Capitalize first letter if it's not
+      if (cleaned && cleaned.length > 0) {
+        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      }
+      
+      // Make sure there's a period at the end if missing
+      if (cleaned && !cleaned.endsWith('.') && !cleaned.endsWith('!') && !cleaned.endsWith('?')) {
+        cleaned += '.';
+      }
+      
+      // Make sure there's no double spaces
+      cleaned = cleaned.replace(/\s\s+/g, ' ');
+      
+      return cleaned;
+    });
+  
+  // Extract cooking time from prep time
+  const getCookingTime = () => {
+    if (!prepTime) return '30 min';
     
-    // Capitalize first letter if it's not
-    if (cleaned && cleaned.length > 0) {
-      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    const timeMatch = prepTime.match(/\d+/);
+    if (timeMatch) {
+      return `${timeMatch[0]} minutes`;
     }
     
-    // Make sure there's a period at the end if missing
-    if (cleaned && !cleaned.endsWith('.') && !cleaned.endsWith('!') && !cleaned.endsWith('?')) {
-      cleaned += '.';
-    }
-    
-    // Make sure there's no double spaces
-    cleaned = cleaned.replace(/\s\s+/g, ' ');
-    
-    return cleaned;
-  }).filter(item => item.length > 0); // Remove empty items
+    return '30 minutes';
+  };
   
   return (
     <ol className="space-y-6">
       {formattedInstructions && formattedInstructions.length > 0 ? (
         formattedInstructions.map((instruction, index) => (
           <li key={index} className="flex gap-3">
-            <div className="flex-shrink-0 bg-muted w-8 h-8 font-mono text-teal flex items-center justify-center">
+            <div className="flex-shrink-0 bg-muted w-8 h-8 font-mono text-teal flex items-center justify-center rounded-full">
               {index + 1}
             </div>
-            <div>
+            <div className="flex-1">
               <p>{instruction}</p>
-              {typeof instruction === 'string' && instruction.toLowerCase().includes('minute') && (
+              {((typeof instruction === 'string' && instruction.toLowerCase().includes('minute')) ||
+                (index === formattedInstructions.length - 1)) && (
                 <Button 
                   variant="outline" 
                   size="sm" 
                   className="mt-2 text-xs text-teal border-teal/30 hover:bg-teal/10 flex items-center gap-1.5"
                   onClick={onTimerClick}
                 >
-                  <Timer className="h-3 w-3" /> Set Timer
+                  <Timer className="h-3 w-3" /> Set Timer ({getCookingTime()})
                 </Button>
               )}
             </div>

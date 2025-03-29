@@ -113,6 +113,29 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
     }
   };
 
+  // Format ingredients count
+  const getIngredientsCount = () => {
+    return recipe.ingredients?.filter(item => item && item.trim().length > 0).length || 0;
+  };
+
+  // Format prep time to be more readable
+  const getFormattedPrepTime = () => {
+    if (!recipe.prepTime) return '30 min';
+    
+    // If it's already formatted with 'min', return as is
+    if (recipe.prepTime.toLowerCase().includes('min')) {
+      return recipe.prepTime;
+    }
+    
+    // Extract numbers from the string
+    const timeMatch = recipe.prepTime.match(/\d+/);
+    if (timeMatch) {
+      return `${timeMatch[0]} min`;
+    }
+    
+    return recipe.prepTime;
+  };
+
   return (
     <GlassCard 
       className={cn(
@@ -131,7 +154,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
         <RecipeImage 
           src={recipe.image} 
           alt={recipe.title} 
-          className="w-full h-full"
+          className="w-full h-full object-cover"
           withZoomEffect={true}
         />
         <Badge className="absolute top-3 right-3 z-20 bg-gradient-primary text-charcoal font-mono text-xs">
@@ -151,12 +174,12 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
         <div className="flex items-center gap-3 text-xs font-mono text-offwhite/70 mt-4">
           <div className="flex items-center gap-1.5">
             <Clock className="h-4 w-4 text-coral transition-transform duration-300 group-hover:scale-110" />
-            <span>{recipe.prepTime}</span>
+            <span>{getFormattedPrepTime()}</span>
           </div>
           
           <div className="flex items-center gap-1.5">
             <Utensils className="h-4 w-4 text-purple transition-transform duration-300 group-hover:scale-110" />
-            <span>{recipe.ingredients.length} ingredients</span>
+            <span>{getIngredientsCount()} ingredients</span>
           </div>
           
           <div className="flex items-center gap-1.5">
