@@ -16,13 +16,14 @@ const ExtractRecipeSection: React.FC = () => {
     handleRecipeExtraction,
     handleRetry,
     handleTryWithClaude,
+    handleTryWithFreeModel,
     resetRetries
   } = useRecipeExtraction();
 
-  const onSubmit = (submittedUrl: string, useClaude: boolean = false, debugMode: boolean = false) => {
+  const onSubmit = (submittedUrl: string, useClaude: boolean = false, useFreeModel: boolean = false, debugMode: boolean = false) => {
     setUrl(submittedUrl);
     resetRetries();
-    handleRecipeExtraction(submittedUrl, useClaude, debugMode);
+    handleRecipeExtraction(submittedUrl, useClaude, useFreeModel, debugMode);
   };
 
   const onRetry = () => {
@@ -34,6 +35,12 @@ const ExtractRecipeSection: React.FC = () => {
   const onTryWithClaude = () => {
     if (url) {
       handleTryWithClaude(url);
+    }
+  };
+
+  const onTryWithFreeModel = () => {
+    if (url) {
+      handleTryWithFreeModel(url);
     }
   };
 
@@ -49,6 +56,7 @@ const ExtractRecipeSection: React.FC = () => {
           error={extractionError}
           onRetry={onRetry}
           onTryWithClaude={onTryWithClaude}
+          onTryWithFreeModel={onTryWithFreeModel}
           isLoading={isLoading}
           retries={retries}
           maxRetries={maxRetries}

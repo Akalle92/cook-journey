@@ -13,6 +13,7 @@ interface ExtractionErrorProps {
   };
   onRetry: () => void;
   onTryWithClaude: () => void;
+  onTryWithFreeModel: () => void;
   isLoading: boolean;
   retries: number;
   maxRetries: number;
@@ -22,6 +23,7 @@ const ExtractionError: React.FC<ExtractionErrorProps> = ({
   error,
   onRetry,
   onTryWithClaude,
+  onTryWithFreeModel,
   isLoading,
   retries,
   maxRetries
@@ -51,7 +53,7 @@ const ExtractionError: React.FC<ExtractionErrorProps> = ({
         </div>
       )}
       
-      <div className="flex gap-2 mt-3">
+      <div className="flex flex-wrap gap-2 mt-3">
         <Button 
           size="sm" 
           variant="secondary" 
@@ -68,6 +70,15 @@ const ExtractionError: React.FC<ExtractionErrorProps> = ({
           disabled={isLoading}
         >
           Try with Claude AI
+        </Button>
+        
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={onTryWithFreeModel}
+          disabled={isLoading}
+        >
+          Try with Free AI
         </Button>
       </div>
     </div>
