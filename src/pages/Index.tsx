@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/Header';
 import RecipeDetail from '@/components/RecipeDetail';
 import { Recipe } from '@/components/RecipeCard';
-import { fetchRecipes } from '@/services/recipeService';
+import { fetchRecipes } from '@/services/recipeApiService';
 import ExtractRecipeSection from '@/components/RecipeExtraction/ExtractRecipeSection';
 import RecipeDisplaySection from '@/components/RecipeDisplaySection';
 import { useRecipeExtraction } from '@/hooks/useRecipeExtraction';

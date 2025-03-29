@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { X, ChevronRight, Clock, Utensils, ChefHat, Timer, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -16,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteRecipe } from '@/services/recipeService';
+import { deleteRecipe } from '@/services/recipeApiService';
 import { useQueryClient } from '@tanstack/react-query';
 import RecipeImage from '@/components/RecipeImage';
 

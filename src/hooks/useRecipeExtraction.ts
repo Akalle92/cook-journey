@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { extractRecipeFromUrl, enhanceRecipeWithClaude } from '@/services/recipeService';
+import { extractRecipeFromUrl, enhanceRecipeWithClaude } from '@/services/recipeExtractionService';
 import { Recipe, ExtractionMethod } from '@/components/RecipeCard';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
