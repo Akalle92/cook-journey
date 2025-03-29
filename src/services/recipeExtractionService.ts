@@ -1,8 +1,9 @@
+
 import { Recipe } from '@/components/RecipeCard';
 import { mapToRecipe } from '@/utils/recipeMappers';
 import { formatRecipeTitle } from '@/utils/recipeDataUtils';
 
-const RECIPE_API_URL = process.env.NEXT_PUBLIC_RECIPE_API_URL || 'http://localhost:3001';
+const RECIPE_API_URL = import.meta.env.VITE_RECIPE_API_URL || 'http://localhost:3001';
 
 // Function to perform the actual extraction from the URL
 const performExtraction = async (url: string): Promise<Recipe | null> => {
