@@ -4,8 +4,11 @@ export const formatRecipeTitle = (title: string): string => {
   // Remove any existing "(Restaurant Style)" or similar suffixes
   const cleanTitle = title.replace(/\s*\(.*\)$/, '').trim();
   
+  // Clean up any HTML entities
+  const decodedTitle = decodeHtmlEntities(cleanTitle);
+  
   // Capitalize each word
-  const formattedTitle = cleanTitle
+  const formattedTitle = decodedTitle
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
@@ -119,6 +122,33 @@ export const determineDifficulty = (
   return 'Hard';
 };
 
+// Decode HTML entities in a string
+export const decodeHtmlEntities = (text: string): string => {
+  const entities = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&#x25a2;': '•', // Convert square symbol to bullet point
+    '&nbsp;': ' '
+  };
+  
+  // Replace named entities
+  let decoded = text.replace(/&amp;|&lt;|&gt;|&quot;|&#39;|&#x25a2;|&nbsp;/g, 
+    match => entities[match as keyof typeof entities]);
+  
+  // Replace numeric entities
+  decoded = decoded.replace(/&#(\d+);/g, (match, dec) => 
+    String.fromCharCode(dec));
+  
+  // Replace hex entities
+  decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (match, hex) => 
+    String.fromCharCode(parseInt(hex, 16)));
+  
+  return decoded;
+};
+
 // Normalize ingredient text
 export const normalizeIngredient = (ingredient: any): string => {
   if (!ingredient) return '';
@@ -128,7 +158,7 @@ export const normalizeIngredient = (ingredient: any): string => {
     : (ingredient.name || ingredient.text || String(ingredient));
   
   // Clean up the ingredient text
-  return ingredientText
+  return decodeHtmlEntities(ingredientText)
     .trim()
     .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
     .replace(/^[-•*]+\s*/, '') // Remove bullet points at the beginning
@@ -144,7 +174,7 @@ export const normalizeInstruction = (instruction: any): string => {
     : (instruction.text || String(instruction));
   
   // Clean up the instruction text
-  return instructionText
+  return decodeHtmlEntities(instructionText)
     .trim()
     .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
     .replace(/^[-•*]+\s*/, '') // Remove bullet points at the beginning

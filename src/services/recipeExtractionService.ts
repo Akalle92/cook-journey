@@ -1,7 +1,7 @@
 
 import { Recipe } from '@/components/RecipeCard';
 import { mapToRecipe } from '@/utils/recipeMappers';
-import { formatRecipeTitle } from '@/utils/recipeDataUtils';
+import { formatRecipeTitle, decodeHtmlEntities } from '@/utils/recipeDataUtils';
 
 const RECIPE_API_URL = import.meta.env.VITE_RECIPE_API_URL || 'http://localhost:3001';
 
@@ -75,6 +75,19 @@ export const extractRecipeFromUrl = async (url: string) => {
   
   if (extractedRecipe && extractedRecipe.title) {
     extractedRecipe.title = formatRecipeTitle(extractedRecipe.title);
+    
+    // Additional cleanup of ingredients and instructions
+    if (extractedRecipe.ingredients && Array.isArray(extractedRecipe.ingredients)) {
+      extractedRecipe.ingredients = extractedRecipe.ingredients.map(ingredient => 
+        typeof ingredient === 'string' ? decodeHtmlEntities(ingredient) : ingredient
+      );
+    }
+    
+    if (extractedRecipe.instructions && Array.isArray(extractedRecipe.instructions)) {
+      extractedRecipe.instructions = extractedRecipe.instructions.map(instruction => 
+        typeof instruction === 'string' ? decodeHtmlEntities(instruction) : instruction
+      );
+    }
   }
   
   return extractedRecipe;
@@ -85,6 +98,19 @@ export const enhanceRecipeWithFreeModel = async (url: string) => {
   
   if (enhancedRecipe && enhancedRecipe.title) {
     enhancedRecipe.title = formatRecipeTitle(enhancedRecipe.title);
+    
+    // Additional cleanup of ingredients and instructions
+    if (enhancedRecipe.ingredients && Array.isArray(enhancedRecipe.ingredients)) {
+      enhancedRecipe.ingredients = enhancedRecipe.ingredients.map(ingredient => 
+        typeof ingredient === 'string' ? decodeHtmlEntities(ingredient) : ingredient
+      );
+    }
+    
+    if (enhancedRecipe.instructions && Array.isArray(enhancedRecipe.instructions)) {
+      enhancedRecipe.instructions = enhancedRecipe.instructions.map(instruction => 
+        typeof instruction === 'string' ? decodeHtmlEntities(instruction) : instruction
+      );
+    }
   }
   
   return enhancedRecipe;

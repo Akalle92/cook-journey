@@ -1,3 +1,4 @@
+
 import { Recipe } from '@/components/RecipeCard';
 import { extractFirstImageUrl } from './imageUtils';
 import { 
@@ -5,7 +6,8 @@ import {
   determineDifficulty, 
   parseTimeValue,
   normalizeIngredient,
-  normalizeInstruction
+  normalizeInstruction,
+  decodeHtmlEntities
 } from './recipeDataUtils';
 
 // Enhanced title formatting function
@@ -13,8 +15,11 @@ const formatRecipeTitle = (title: string): string => {
   // Remove any existing "(Restaurant Style)" or similar suffixes
   const cleanTitle = title.replace(/\s*\(.*\)$/, '').trim();
   
+  // Clean up any HTML entities
+  const decodedTitle = decodeHtmlEntities(cleanTitle);
+  
   // Capitalize each word
-  const formattedTitle = cleanTitle
+  const formattedTitle = decodedTitle
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
@@ -31,10 +36,15 @@ export const mapToRecipe = (item: any): Recipe => {
     if (Array.isArray(item.ingredients)) {
       ingredients = item.ingredients.map(normalizeIngredient).filter(Boolean); 
     } else if (typeof item.ingredients === 'string') {
-      const parsed = JSON.parse(item.ingredients);
-      ingredients = Array.isArray(parsed) 
-        ? parsed.map(normalizeIngredient).filter(Boolean)
-        : [];
+      try {
+        const parsed = JSON.parse(item.ingredients);
+        ingredients = Array.isArray(parsed) 
+          ? parsed.map(normalizeIngredient).filter(Boolean)
+          : [];
+      } catch {
+        // If not valid JSON, treat as a single ingredient
+        ingredients = [normalizeIngredient(item.ingredients)].filter(Boolean);
+      }
     } else if (typeof item.ingredients === 'object' && item.ingredients !== null) {
       ingredients = Array.isArray(item.ingredients) 
         ? item.ingredients.map(normalizeIngredient).filter(Boolean) 
@@ -51,10 +61,15 @@ export const mapToRecipe = (item: any): Recipe => {
     if (Array.isArray(item.instructions)) {
       instructions = item.instructions.map(normalizeInstruction).filter(Boolean);
     } else if (typeof item.instructions === 'string') {
-      const parsed = JSON.parse(item.instructions);
-      instructions = Array.isArray(parsed) 
-        ? parsed.map(normalizeInstruction).filter(Boolean) 
-        : [];
+      try {
+        const parsed = JSON.parse(item.instructions);
+        instructions = Array.isArray(parsed) 
+          ? parsed.map(normalizeInstruction).filter(Boolean) 
+          : [];
+      } catch {
+        // If not valid JSON, treat as a single instruction
+        instructions = [normalizeInstruction(item.instructions)].filter(Boolean);
+      }
     } else if (typeof item.instructions === 'object' && item.instructions !== null) {
       instructions = Array.isArray(item.instructions) 
         ? item.instructions.map(normalizeInstruction).filter(Boolean) 
@@ -68,6 +83,7 @@ export const mapToRecipe = (item: any): Recipe => {
   // Format the category with proper capitalization and validation
   let category = extractFirstValue(item.category) || extractFirstValue(item.cuisine) || 'Uncategorized';
   if (category) {
+    category = decodeHtmlEntities(category);
     category = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
   }
 
@@ -93,9 +109,12 @@ export const mapToRecipe = (item: any): Recipe => {
     }
   }
 
+  let title = item.title || 'Untitled Recipe';
+  title = decodeHtmlEntities(title);
+
   return {
     id: item.id,
-    title: formatRecipeTitle(item.title || 'Untitled Recipe'),
+    title: formatRecipeTitle(title),
     image: extractFirstImageUrl(item.image_url || item.image) || 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80&w=1000&auto=format&fit=crop',
     category: category,
     prepTime: prepTime,
