@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/context/AuthContext';
@@ -16,41 +15,41 @@ import RecipeCategoriesChart from '@/components/Dashboard/RecipeCategoriesChart'
 import CookingTimeChart from '@/components/Dashboard/CookingTimeChart';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { TextureOverlay } from '@/components/BackgroundSystem/TextureOverlay';
-
 const Dashboard = () => {
-  const { user } = useAuth();
-  const { profile, isLoading: isProfileLoading } = useProfile();
-  const { data: stats, isLoading: isStatsLoading } = useDashboardStats();
+  const {
+    user
+  } = useAuth();
+  const {
+    profile,
+    isLoading: isProfileLoading
+  } = useProfile();
+  const {
+    data: stats,
+    isLoading: isStatsLoading
+  } = useDashboardStats();
   const [showAuthModal, setShowAuthModal] = React.useState(false);
-  
   React.useEffect(() => {
     if (!user) {
       setShowAuthModal(true);
     }
   }, [user]);
-
   const isLoading = isProfileLoading || isStatsLoading;
-
-  return (
-    <div className="min-h-screen">
+  return <div className="min-h-screen">
       <Header />
       
-      <main className="container mx-auto px-4 py-6 relative">
+      <main className="container mx-auto px-4 py-6 relative bg-zinc-950">
         <TextureOverlay type="paper" opacity={0.05} />
         
         <div className="flex items-center justify-between mb-8">
           <h1 className="font-serif text-3xl font-bold text-gradient">Cooking Dashboard</h1>
-          {!isLoading && user && (
-            <Button variant="ghost" asChild className="group">
+          {!isLoading && user && <Button variant="ghost" asChild className="group">
               <Link to="/" className="flex items-center gap-1">
                 View All Recipes <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Link>
-            </Button>
-          )}
+            </Button>}
         </div>
         
-        {!user && (
-          <GlassCard>
+        {!user && <GlassCard>
             <GlassCardHeader>
               <GlassCardTitle>Authentication Required</GlassCardTitle>
               <GlassCardDescription>
@@ -60,13 +59,12 @@ const Dashboard = () => {
             <GlassCardContent>
               <Button onClick={() => setShowAuthModal(true)} className="animated-gradient bg-gradient-to-r from-teal via-purple to-coral text-charcoal">Sign In</Button>
             </GlassCardContent>
-          </GlassCard>
-        )}
+          </GlassCard>}
         
-        {isLoading && user && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[...Array(4)].map((_, index) => (
-              <GlassCard key={index} className="floating" style={{ animationDelay: `${index * 0.2}s` }}>
+        {isLoading && user && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, index) => <GlassCard key={index} className="floating" style={{
+          animationDelay: `${index * 0.2}s`
+        }}>
                 <GlassCardHeader className="pb-2">
                   <Skeleton className="h-4 w-24" />
                 </GlassCardHeader>
@@ -74,13 +72,10 @@ const Dashboard = () => {
                   <Skeleton className="h-8 w-16 mb-2" />
                   <Skeleton className="h-4 w-full" />
                 </GlassCardContent>
-              </GlassCard>
-            ))}
-          </div>
-        )}
+              </GlassCard>)}
+          </div>}
         
-        {!isLoading && user && stats && (
-          <>
+        {!isLoading && user && stats && <>
             <CookingStatCards stats={stats} />
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -99,14 +94,10 @@ const Dashboard = () => {
               <TextureOverlay type="medium" blend="soft-light" opacity={0.07} />
               <CookingActivityList activities={stats.recentActivity} />
             </div>
-          </>
-        )}
+          </>}
       </main>
       
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
-
