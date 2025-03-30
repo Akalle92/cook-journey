@@ -3,7 +3,7 @@ import { Recipe, RecipeSortField, SortOrder } from '@/types/recipe';
 import { RecipeCard } from '@/components/RecipeCard';
 import { RecipeCardSkeleton } from '@/components/RecipeCard/RecipeCardSkeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import {
   Select,
@@ -23,6 +23,7 @@ interface RecipeDisplaySectionProps {
   sortBy: RecipeSortField;
   sortOrder: SortOrder;
   onSortChange: (field: RecipeSortField, order: SortOrder) => void;
+  emptyMessage?: string;
 }
 
 const sortOptions: { value: RecipeSortField; label: string }[] = [
@@ -44,6 +45,7 @@ const RecipeDisplaySection: React.FC<RecipeDisplaySectionProps> = ({
   sortBy,
   sortOrder,
   onSortChange,
+  emptyMessage = "No recipes found. Try adjusting your search filters."
 }) => {
   const { lastElementRef } = useInfiniteScroll({
     onLoadMore,
@@ -54,7 +56,7 @@ const RecipeDisplaySection: React.FC<RecipeDisplaySectionProps> = ({
   if (isError) {
     return (
       <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
+        <Loader2 className="h-4 w-4" />
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
           Failed to load recipes. Please try again later.
@@ -66,7 +68,7 @@ const RecipeDisplaySection: React.FC<RecipeDisplaySectionProps> = ({
   if (recipes.length === 0 && !isLoading) {
     return (
       <div className="text-center py-8">
-        <p className="text-muted-foreground">No recipes found. Try adjusting your search filters.</p>
+        <p className="text-muted-foreground">{emptyMessage}</p>
       </div>
     );
   }

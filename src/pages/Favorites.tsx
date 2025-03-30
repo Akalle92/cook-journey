@@ -1,29 +1,59 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/Header';
 import RecipeDetail from '@/components/RecipeDetail';
-import { useFavorites } from '@/hooks/useFavorites';
-import RecipeDisplaySection from '@/components/RecipeDisplaySection';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Recipe } from '@/types/recipe';
+import { fetchFavoriteRecipes } from '@/services/recipeService';
+import RecipeDisplaySection from '@/components/RecipeDisplaySection';
+import { useRecipeExtraction } from '@/hooks/useRecipeExtraction';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { RecipeSortField, SortOrder } from '@/types/recipe';
 
 const Favorites = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const {
-    favorites,
-    isLoading,
-    isError,
-    error,
     selectedRecipe,
+    showRecipeDetail,
     setSelectedRecipe,
-  } = useFavorites();
+    setShowRecipeDetail
+  } = useRecipeExtraction();
+
+  // Fetch favorites using React Query
+  const {
+    data: favoriteRecipes = [],
+    isLoading,
+    isError
+  } = useQuery({
+    queryKey: ['favoriteRecipes', user?.id],
+    queryFn: () => fetchFavoriteRecipes(),
+    staleTime: 60000, // 1 minute
+    enabled: !!user, // Only fetch if user is logged in
+    meta: {
+      onError: (error: any) => {
+        console.error('Failed to load favorite recipes:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load your favorite recipes. Please try again.',
+          variant: 'destructive'
+        });
+      }
+    }
+  });
 
   const handleRecipeClick = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
+    setShowRecipeDetail(true);
   };
 
   const closeRecipeDetail = () => {
-    setSelectedRecipe(null);
+    setShowRecipeDetail(false);
+  };
+
+  const handleSortChange = (field: RecipeSortField, order: SortOrder) => {
+    // Implement sorting logic here
+    console.log('Sorting by:', field, order);
   };
 
   return (
@@ -31,58 +61,34 @@ const Favorites = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-6 bg-black">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold">Your Favorite Recipes</h1>
-            <p className="text-muted-foreground">
-              {favorites.length} {favorites.length === 1 ? 'recipe' : 'recipes'}
+        <h1 className="text-3xl font-bold mb-8 text-white">My Favorite Recipes</h1>
+        
+        {!user && (
+          <div className="bg-muted/20 backdrop-blur-sm rounded-lg p-6 mb-8 text-center">
+            <h2 className="text-xl font-semibold mb-2">Sign in to view your favorites</h2>
+            <p className="text-muted-foreground mb-4">
+              You need to be signed in to save and view your favorite recipes.
             </p>
           </div>
-
-          {isError && error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription className="flex items-center justify-between">
-                <span>{error.message}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.location.reload()}
-                  className="ml-4"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Retry
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {!isLoading && favorites.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">
-                You haven't added any recipes to your favorites yet.
-              </p>
-            </div>
-          )}
-
-          <RecipeDisplaySection
-            recipes={favorites.map(f => f.recipe)}
-            isLoading={isLoading}
-            isError={isError}
-            onRecipeClick={handleRecipeClick}
-            onLoadMore={() => {}}
-            hasMore={false}
-            sortBy="createdAt"
-            sortOrder="desc"
-            onSortChange={() => {}}
-          />
-        </div>
+        )}
+        
+        <RecipeDisplaySection
+          recipes={favoriteRecipes}
+          isLoading={isLoading}
+          isError={isError}
+          onRecipeClick={handleRecipeClick}
+          onLoadMore={() => {}}
+          hasMore={false}
+          sortBy="createdAt"
+          sortOrder="desc"
+          onSortChange={handleSortChange}
+          emptyMessage="You don't have any favorite recipes yet."
+        />
       </main>
       
-      <RecipeDetail recipe={selectedRecipe} isOpen={!!selectedRecipe} onClose={closeRecipeDetail} />
+      <RecipeDetail recipe={selectedRecipe} isOpen={showRecipeDetail} onClose={closeRecipeDetail} />
     </div>
   );
 };
 
-export default Favorites; 
+export default Favorites;
