@@ -1,47 +1,29 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/Header';
 import RecipeDetail from '@/components/RecipeDetail';
-import { Recipe } from '@/types/recipe';
-import { fetchRecipes } from '@/services/recipeApiService';
-import ExtractRecipeSection from '@/components/RecipeExtraction/ExtractRecipeSection';
+import { useFavorites } from '@/hooks/useFavorites';
 import RecipeDisplaySection from '@/components/RecipeDisplaySection';
-import { useRecipeExtraction } from '@/hooks/useRecipeExtraction';
-import { RecipeSearch } from '@/components/RecipeSearch/RecipeSearch';
-import { useRecipeSearch } from '@/hooks/useRecipeSearch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
+import { Recipe } from '@/types/recipe';
 
-const Index = () => {
+const Favorites = () => {
   const {
-    selectedRecipe,
-    showRecipeDetail,
-    setSelectedRecipe,
-    setShowRecipeDetail
-  } = useRecipeExtraction();
-
-  const {
-    recipes,
+    favorites,
     isLoading,
     isError,
     error,
-    filters,
-    searchParams,
-    hasMore,
-    handleSearch,
-    handleSortChange,
-    handleRetry,
-    loadMore
-  } = useRecipeSearch();
+    selectedRecipe,
+    setSelectedRecipe,
+  } = useFavorites();
 
   const handleRecipeClick = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
-    setShowRecipeDetail(true);
   };
 
   const closeRecipeDetail = () => {
-    setShowRecipeDetail(false);
+    setSelectedRecipe(null);
   };
 
   return (
@@ -49,15 +31,13 @@ const Index = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-6 bg-black">
-        <ExtractRecipeSection />
-        
         <div className="space-y-6">
-          <RecipeSearch
-            onSearch={handleSearch}
-            filters={filters}
-            currentFilters={searchParams}
-            isLoading={isLoading}
-          />
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold">Your Favorite Recipes</h1>
+            <p className="text-muted-foreground">
+              {favorites.length} {favorites.length === 1 ? 'recipe' : 'recipes'}
+            </p>
+          </div>
 
           {isError && error && (
             <Alert variant="destructive">
@@ -68,7 +48,7 @@ const Index = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleRetry}
+                  onClick={() => window.location.reload()}
                   className="ml-4"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
@@ -78,23 +58,31 @@ const Index = () => {
             </Alert>
           )}
 
+          {!isLoading && favorites.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                You haven't added any recipes to your favorites yet.
+              </p>
+            </div>
+          )}
+
           <RecipeDisplaySection
-            recipes={recipes}
+            recipes={favorites.map(f => f.recipe)}
             isLoading={isLoading}
             isError={isError}
             onRecipeClick={handleRecipeClick}
-            onLoadMore={loadMore}
-            hasMore={hasMore}
-            sortBy={searchParams.sortBy || 'createdAt'}
-            sortOrder={searchParams.sortOrder || 'desc'}
-            onSortChange={handleSortChange}
+            onLoadMore={() => {}}
+            hasMore={false}
+            sortBy="createdAt"
+            sortOrder="desc"
+            onSortChange={() => {}}
           />
         </div>
       </main>
       
-      <RecipeDetail recipe={selectedRecipe} isOpen={showRecipeDetail} onClose={closeRecipeDetail} />
+      <RecipeDetail recipe={selectedRecipe} isOpen={!!selectedRecipe} onClose={closeRecipeDetail} />
     </div>
   );
 };
 
-export default Index;
+export default Favorites; 
