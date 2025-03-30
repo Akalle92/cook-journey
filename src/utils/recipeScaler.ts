@@ -1,3 +1,4 @@
+
 import { Recipe } from '@/types/recipe';
 
 interface ScaledRecipe extends Omit<Recipe, 'ingredients' | 'prepTime' | 'cookTime' | 'servings'> {
@@ -17,7 +18,7 @@ export const scaleRecipe = (recipe: Recipe, targetServings: number): ScaledRecip
     if (!matches) return ingredient;
 
     const [_, amount, unit] = matches;
-    const scaledAmount = (parseFloat(amount) * scaleFactor).toFixed(2);
+    let scaledAmount = (parseFloat(amount) * scaleFactor).toFixed(2);
 
     // Handle common unit conversions
     let scaledUnit = unit;
@@ -72,4 +73,4 @@ export const formatTime = (minutes: number): string => {
     return `${hours}h ${mins}m`;
   }
   return `${mins}m`;
-}; 
+};
