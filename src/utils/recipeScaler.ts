@@ -1,3 +1,4 @@
+
 import { Recipe } from '@/types/recipe';
 
 interface ScaledRecipe extends Omit<Recipe, 'ingredients' | 'prepTime' | 'cookTime' | 'servings'> {
@@ -72,4 +73,4 @@ export const formatTime = (minutes: number): string => {
     return `${hours}h ${mins}m`;
   }
   return `${mins}m`;
-}; 
+};
