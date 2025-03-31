@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { TrendingUp, Star } from 'lucide-react';
 import { Recipe } from './RecipeCard';
@@ -90,8 +89,8 @@ const TrendingRecipes: React.FC<TrendingRecipesProps> = ({ recipes, onRecipeClic
               className={cn(
                 "w-64 flex-shrink-0 overflow-hidden",
                 getMaterialClass(recipe.category),
-                hoveredId === recipe.id ? "shadow-card-hover transform scale-[1.02]" : "shadow-card",
-                "transition-all duration-300"
+                hoveredId === recipe.id ? "shadow-elevation-2 transform scale-[1.01]" : "shadow-elevation-1",
+                "transition-all duration-500 ease-out"
               )}
               onClick={() => onRecipeClick(recipe)}
               onMouseEnter={() => handleMouseEnter(recipe)}

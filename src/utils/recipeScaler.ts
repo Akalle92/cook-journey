@@ -17,7 +17,7 @@ export const scaleRecipe = (recipe: Recipe, targetServings: number): ScaledRecip
     if (!matches) return ingredient;
 
     const [_, amount, unit] = matches;
-    const scaledAmount = (parseFloat(amount) * scaleFactor).toFixed(2);
+    let scaledAmount = (parseFloat(amount) * scaleFactor).toFixed(2);
 
     // Handle common unit conversions
     let scaledUnit = unit;
@@ -45,8 +45,8 @@ export const scaleRecipe = (recipe: Recipe, targetServings: number): ScaledRecip
   return {
     ...recipe,
     ingredients: scaledIngredients,
-    prepTime: scaleTime(recipe.prepTime),
-    cookTime: scaleTime(recipe.cookTime),
+    prepTime: scaleTime(String(recipe.prepTime)),
+    cookTime: scaleTime(String(recipe.cookTime)),
     servings: targetServings,
   };
 };
